@@ -12,7 +12,7 @@
  *   3) 卡带 Schema 校验（CHEM_SCHEMA / validateChemCartridge）
  *
  * 加载顺序（双击 index.html 即可运行，禁用 ES Module）：
- *   data/ch1_water.js → data/ch2_oxygen_carbon.js → engine.js
+ *   data/ch1_water.js → data/ch2_oxygen_carbon.js → data/ch3_metals.js → engine.js
  *   各卡带文件执行：window.CHEM_CARTRIDGES = window.CHEM_CARTRIDGES || [] 再 push。
  * ========================================================================== */
 (function () {
@@ -54,6 +54,10 @@
     Mn: { color: '#7e57c2', glow: '#b39ddb', r: 24, label: 'Mn' },  // 锰 · 紫（二氧化锰）
     Ca: { color: '#8d6e63', glow: '#bcaaa4', r: 25, label: 'Ca' },  // 钙 · 棕（石灰石）
     Cl: { color: '#26a69a', glow: '#80cbc4', r: 21, label: 'Cl' },  // 氯 · 青绿
+    Fe: { color: '#78909c', glow: '#b0bec5', r: 25, label: 'Fe' },  // 铁 · 钢灰
+    Cu: { color: '#c2704e', glow: '#e8a58a', r: 24, label: 'Cu' },  // 铜 · 紫红
+    S:  { color: '#e6c84e', glow: '#fff1a8', r: 21, label: 'S' },   // 硫 · 淡黄
+    Zn: { color: '#9aa7b5', glow: '#d5dee6', r: 25, label: 'Zn' },  // 锌 · 银白
     e:  { color: '#ffd54f', glow: '#fff3b0', r: 5, label: 'e' }     // 电子 · 金
   };
 
@@ -1313,6 +1317,380 @@
     drawPill(cx, baseY + 26, m.vesselLabel || '大理石 + 稀盐酸', '#90caf9', 0.9);
   }
 
+  /* ---------------- L1 新增场景（S3 · 金属与氧化还原）：铁丝燃烧 / 铁+盐酸 / CO还原氧化铁 / 铁+硫酸铜 ---------------- */
+
+  /** 螺旋状铁丝（弹簧圈投影：竖直正弦带） */
+  function drawSpiralWire(x, yTop, yBottom, turns, glowK, time) {
+    ctx.save();
+    ctx.lineCap = 'round';
+    var segs = turns * 14;
+    for (var pass = 0; pass < 2; pass++) {
+      ctx.beginPath();
+      for (var i = 0; i <= segs; i++) {
+        var k = i / segs;
+        var yy = yTop + (yBottom - yTop) * k;
+        var xx = x + Math.sin(k * turns * Math.PI * 2) * 16;
+        if (i === 0) ctx.moveTo(xx, yy); else ctx.lineTo(xx, yy);
+      }
+      if (pass === 0) {
+        ctx.strokeStyle = glowK > 0.01 ? 'rgba(255,170,80,' + (0.35 + glowK * 0.5) + ')' : 'rgba(120,140,165,0.35)';
+        ctx.lineWidth = 9;
+      } else {
+        var wg = ctx.createLinearGradient(x - 16, yTop, x + 16, yBottom);
+        wg.addColorStop(0, glowK > 0.3 ? '#ffd9a0' : '#aeb9c4');
+        wg.addColorStop(0.5, glowK > 0.3 ? '#ffca7a' : '#78909c');
+        wg.addColorStop(1, glowK > 0.3 ? '#ffb74d' : '#5c7482');
+        ctx.strokeStyle = wg;
+        ctx.lineWidth = 5;
+      }
+      ctx.stroke();
+    }
+    // 燃烧红热头（沿铁丝上下游走）
+    if (glowK > 0.01) {
+      var headK = 0.5 + 0.45 * Math.sin(time * 2.2);
+      var hy = yTop + (yBottom - yTop) * headK;
+      var hx = x + Math.sin(headK * turns * Math.PI * 2) * 16;
+      var hg = ctx.createRadialGradient(hx, hy, 2, hx, hy, 30);
+      hg.addColorStop(0, '#fff3c4');
+      hg.addColorStop(0.35, '#ff9d4d');
+      hg.addColorStop(1, 'rgba(255,120,50,0)');
+      ctx.globalAlpha = glowK;
+      ctx.fillStyle = hg;
+      ctx.beginPath();
+      ctx.arc(hx, hy, 30, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+    ctx.globalAlpha = 1;
+  }
+
+  /** 火星四射（从点向四周飞溅的细亮线） */
+  function drawSparks(x, y, strength, time) {
+    if (strength <= 0.01) return;
+    ctx.save();
+    ctx.lineCap = 'round';
+    for (var i = 0; i < 18; i++) {
+      var ang = seeded(i * 1.31) * Math.PI * 2 + time * 0.6;
+      var fly = (seeded(i * 2.17) + time * (0.55 + seeded(i * 3.7) * 0.8)) % 1;
+      var r0 = 14 + fly * 88;
+      var len = 7 + (1 - fly) * 16;
+      var alpha = (1 - fly) * strength;
+      if (alpha <= 0.02) continue;
+      ctx.globalAlpha = alpha;
+      ctx.strokeStyle = i % 3 === 0 ? '#fff3c4' : '#ffb74d';
+      ctx.lineWidth = i % 3 === 0 ? 2.4 : 1.6;
+      var sx = x + Math.cos(ang) * r0, sy = y + Math.sin(ang) * r0 * 0.9;
+      ctx.beginPath();
+      ctx.moveTo(sx, sy);
+      ctx.lineTo(sx + Math.cos(ang) * len, sy + Math.sin(ang) * len + fly * 6);
+      ctx.stroke();
+    }
+    ctx.restore();
+    ctx.globalAlpha = 1;
+  }
+
+  /** 铁钉（竖直：钉帽 + 钉身 + 钉尖） */
+  function drawNail(x, yTop, len, copperK, glowK) {
+    ctx.save();
+    var w = 13;
+    // 钉帽
+    ctx.fillStyle = '#9fb0bd';
+    roundRectPath(x - 15, yTop - 10, 30, 14, 5);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(220,235,250,0.55)';
+    ctx.lineWidth = 1.6;
+    ctx.stroke();
+    // 钉身（渐变钢灰）
+    var g = ctx.createLinearGradient(x - w / 2, yTop, x + w / 2, yTop + len);
+    g.addColorStop(0, '#b8c4ce');
+    g.addColorStop(0.5, '#78909c');
+    g.addColorStop(1, '#546a78');
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.moveTo(x - w / 2, yTop);
+    ctx.lineTo(x + w / 2, yTop);
+    ctx.lineTo(x + w / 2, yTop + len - 16);
+    ctx.lineTo(x, yTop + len);
+    ctx.lineTo(x - w / 2, yTop + len - 16);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(220,235,250,0.45)';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+    // 铜镀层（紫红色，自下而上生长）
+    if (copperK > 0.02) {
+      var ch = (len - 10) * Math.min(1, copperK);
+      var cg = ctx.createLinearGradient(x - w / 2, yTop + len, x + w / 2, yTop + len - ch);
+      cg.addColorStop(0, '#a3543a');
+      cg.addColorStop(0.5, '#c2704e');
+      cg.addColorStop(1, '#e8a58a');
+      ctx.globalAlpha = Math.min(1, copperK * 1.2);
+      ctx.fillStyle = cg;
+      ctx.beginPath();
+      ctx.moveTo(x - w / 2 - 3, yTop + len);
+      ctx.lineTo(x + w / 2 + 3, yTop + len);
+      ctx.lineTo(x + w / 2 + 3, yTop + len - ch);
+      ctx.lineTo(x, yTop + len - Math.max(0, ch - 6));
+      ctx.lineTo(x - w / 2 - 3, yTop + len - ch);
+      ctx.closePath();
+      ctx.fill();
+      ctx.globalAlpha = 1;
+    }
+    if (glowK > 0.01) {
+      var gg = ctx.createRadialGradient(x, yTop + len * 0.75, 3, x, yTop + len * 0.75, 44);
+      gg.addColorStop(0, 'rgba(255,220,160,0.55)');
+      gg.addColorStop(1, 'rgba(255,200,120,0)');
+      ctx.globalAlpha = glowK;
+      ctx.fillStyle = gg;
+      ctx.beginPath();
+      ctx.arc(x, yTop + len * 0.75, 44, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.globalAlpha = 1;
+    }
+    ctx.restore();
+    ctx.globalAlpha = 1;
+  }
+
+  /** 铁丝在氧气中剧烈燃烧：火星四射 + 黑色固体 + 瓶底铺细沙 */
+  function drawMacroFeBurn(m, t, time) {
+    var baseY = viewH * 0.80;
+    drawBench(baseY);
+
+    var cx = viewW * 0.40;
+    var jarW = 200, jarH = 250;
+    var jarX = cx - jarW / 2, jarY = baseY - jarH - 14;
+
+    // 集气瓶
+    roundRectPath(jarX, jarY, jarW, jarH, 24);
+    var glass = ctx.createLinearGradient(jarX, jarY, jarX + jarW, jarY + jarH);
+    glass.addColorStop(0, 'rgba(150,190,230,0.18)');
+    glass.addColorStop(0.5, 'rgba(120,170,220,0.10)');
+    glass.addColorStop(1, 'rgba(150,190,230,0.20)');
+    ctx.fillStyle = glass;
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(180,215,255,0.55)';
+    ctx.lineWidth = 3;
+    ctx.stroke();
+    // 氧气（淡蓝）
+    ctx.globalAlpha = 0.13 + 0.05 * (1 - windowT(t, 0.3, 0.8));
+    ctx.fillStyle = '#9fd8ff';
+    roundRectPath(jarX + 12, jarY + 12, jarW - 24, jarH - 26, 18);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+
+    // 瓶底铺水 / 细沙（防炸裂）
+    ctx.fillStyle = 'rgba(210,190,150,0.55)';
+    roundRectPath(jarX + 12, jarY + jarH - 34, jarW - 24, 22, 8);
+    ctx.fill();
+    ctx.fillStyle = 'rgba(120,190,235,0.30)';
+    roundRectPath(jarX + 12, jarY + jarH - 38, jarW - 24, 12, 6);
+    ctx.fill();
+    drawText('瓶底铺水 / 细沙（防炸裂）', cx, jarY + jarH - 52, 11, '#ffd9a0', 'center', 0.9);
+
+    // 螺旋状铁丝 + 坩埚钳
+    var wireX = cx, wireTop = jarY + 42, wireBottom = jarY + jarH - 66;
+    drawTongs(wireX + 22, jarY + 36, -0.28, 108);
+    var glowK = windowT(t, 0.20, 0.34) * (1 - windowT(t, 0.78, 0.94));
+    drawSpiralWire(wireX, wireTop, wireBottom, 5, glowK, time);
+
+    // 火星四射 + 火光
+    var burst = windowT(t, 0.24, 0.36) * (1 - windowT(t, 0.62, 0.78));
+    if (burst > 0.01) {
+      drawStarburst(wireX, wireTop + (wireBottom - wireTop) * 0.5, 130 + 22 * Math.sin(time * 5), burst * 0.85, time, '#ffe9a8');
+      drawSparks(wireX, wireTop + (wireBottom - wireTop) * 0.5, burst, time);
+      drawText('火星四射 · 剧烈燃烧', wireX, jarY - 34, 13, '#ffd54f', 'center', burst);
+    }
+
+    // 黑色固体（Fe₃O₄）落入细沙上
+    var blackK = windowT(t, 0.52, 0.88);
+    if (blackK > 0.03) {
+      drawPowderFall(wireX, wireBottom - 8, 70, 12, blackK, time, '#171b21');
+      ctx.save();
+      ctx.globalAlpha = Math.min(0.95, blackK);
+      ctx.fillStyle = '#1b2027';
+      ctx.beginPath();
+      ctx.ellipse(wireX, jarY + jarH - 44, 46 * blackK + 12, 9, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    drawPill(cx, jarY - 32, '条件：' + (m.conditions || '点燃'), '#ffb74d', 0.95);
+    drawPill(cx, baseY + 26, m.vesselLabel || '螺旋状铁丝（纯氧）', '#b0bec5', 0.9);
+    if (blackK > 0.55) {
+      drawPill(viewW * 0.80, baseY - 40, m.productLabel || '黑色固体 Fe₃O₄', '#90a4ae', 0.9);
+    }
+  }
+
+  /** 铁与稀盐酸：缓慢气泡 + 溶液变浅绿色 */
+  function drawMacroFeAcid(m, t, time) {
+    var baseY = viewH * 0.82;
+    drawBench(baseY);
+
+    var cx = viewW * 0.36, beakerW = 230, beakerH = 220;
+    var beakerY = baseY - beakerH - 18;
+
+    // 溶液颜色：无色 → 浅绿色（Fe²⁺）
+    var greenK = windowT(t, 0.34, 0.86);
+    var liq = 'rgba(' + Math.round(120 - 20 * greenK) + ',' + Math.round(190 + 20 * greenK) +
+      ',' + Math.round(235 - 80 * greenK) + ',' + (0.24 + greenK * 0.18) + ')';
+    drawBeaker(cx, beakerY, beakerW, beakerH, 0.62, liq);
+
+    // 铁钉（斜插在溶液里）
+    drawNail(cx - 18, beakerY - 6, 175, 0, windowT(t, 0.2, 0.5) * 0.35);
+
+    // 铁钉表面缓慢气泡
+    var bubblePower = windowT(t, 0.18, 0.52) * 0.55;
+    if (bubblePower > 0.01) {
+      drawBubbles(cx - 34, beakerY + 82, beakerY + beakerH - 30, bubblePower, time, 4);
+      drawBubbles(cx - 4, beakerY + 96, beakerY + beakerH - 26, bubblePower * 0.8, time, 7);
+    }
+
+    // 氢气气泡升出液面
+    var gasK = windowT(t, 0.30, 0.7);
+    if (gasK > 0.02) {
+      drawBubbles(cx - 12, beakerY - 46, beakerY + 8, gasK * 0.5, time, 9);
+    }
+
+    // 浅绿色提示
+    if (greenK > 0.25) {
+      drawText('溶液由无色 → 浅绿色（Fe²⁺ 特征色）', cx, beakerY + beakerH + 30, 12, '#b9e4a8', 'center', greenK);
+    }
+
+    drawPill(cx, beakerY - 52, '条件：' + (m.conditions || '常温 · 不加热'), '#ffe082', 0.95);
+    drawPill(cx, baseY + 26, m.vesselLabel || '铁钉 + 稀盐酸', '#90caf9', 0.9);
+    drawPill(viewW * 0.80, baseY - 120, m.productLabel || 'FeCl₂ 浅绿色 + H₂↑', '#b9e4a8', 0.85 + greenK * 0.15);
+  }
+
+  /** 一氧化碳高温还原氧化铁：红棕 → 黑色铁粉 + 石灰水 + 尾气点燃 */
+  function drawMacroCoReduction(m, t, time) {
+    var baseY = viewH * 0.82;
+    drawBench(baseY);
+
+    // 硬质玻璃管（横放）
+    var tubeY = baseY - 150, tubeX = viewW * 0.10, tubeW = viewW * 0.48, tubeH = 54;
+    ctx.save();
+    roundRectPath(tubeX, tubeY, tubeW, tubeH, tubeH / 2);
+    var glass = ctx.createLinearGradient(tubeX, tubeY, tubeX, tubeY + tubeH);
+    glass.addColorStop(0, 'rgba(150,190,230,0.22)');
+    glass.addColorStop(0.5, 'rgba(120,170,220,0.10)');
+    glass.addColorStop(1, 'rgba(150,190,230,0.22)');
+    ctx.fillStyle = glass;
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(180,215,255,0.55)';
+    ctx.lineWidth = 3;
+    ctx.stroke();
+    ctx.restore();
+
+    // 管内粉末：Fe₂O₃ 红棕色 → Fe 黑色
+    var blackK = windowT(t, 0.36, 0.86);
+    for (var i = 0; i < 14; i++) {
+      var px = tubeX + 42 + i * (tubeW - 100) / 13;
+      var turn = windowT(t, 0.30 + i * 0.028, 0.46 + i * 0.028);
+      var pr = 7 + seeded(i * 2.2) * 6;
+      ctx.globalAlpha = 0.9;
+      ctx.fillStyle = turn > 0.5 ? '#1c2126' : '#9c4a2e';
+      ctx.beginPath();
+      ctx.ellipse(px, tubeY + tubeH * 0.62, pr * 1.5, pr, 0, 0, Math.PI * 2);
+      ctx.fill();
+      if (turn > 0.1 && turn < 0.9) {
+        ctx.globalAlpha = 0.5 * Math.sin(turn * Math.PI);
+        ctx.fillStyle = '#ff9d5c';
+        ctx.beginPath();
+        ctx.ellipse(px, tubeY + tubeH * 0.62, pr, pr * 0.7, 0, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+    ctx.globalAlpha = 1;
+    drawText('红棕色 Fe₂O₃', tubeX + 70, tubeY - 16, 11, '#d98a63', 'center', 0.9 - blackK * 0.7);
+    drawText('黑色铁粉 Fe（能被磁铁吸引）', tubeX + tubeW * 0.62, tubeY - 16, 11, '#b0bec5', 'center', blackK);
+
+    // 酒精喷灯 / 高温火焰
+    var lampX = tubeX + tubeW * 0.42, lampY = tubeY + tubeH + 20;
+    var flameK = windowT(t, 0.12, 0.26) * (1 - windowT(t, 0.88, 1.0)) + 0.2;
+    drawFlame(lampX, lampY + 12, 1.15 + 0.08 * Math.sin(time * 6), Math.min(1, flameK));
+    drawText('高温', lampX, lampY + 46, 12, '#ffab6b', 'center', 0.9);
+
+    // CO 进气（左侧箭头）
+    var coK = windowT(t, 0.08, 0.30) * (1 - windowT(t, 0.82, 0.98));
+    ctx.save();
+    ctx.globalAlpha = 0.35 + coK * 0.55;
+    ctx.strokeStyle = '#b7e9ff';
+    ctx.lineWidth = 5;
+    ctx.beginPath();
+    ctx.moveTo(tubeX - 64, tubeY + tubeH / 2);
+    ctx.lineTo(tubeX + 2, tubeY + tubeH / 2);
+    ctx.stroke();
+    ctx.fillStyle = '#b7e9ff';
+    ctx.beginPath();
+    ctx.moveTo(tubeX + 2, tubeY + tubeH / 2);
+    ctx.lineTo(tubeX - 14, tubeY + tubeH / 2 - 10);
+    ctx.lineTo(tubeX - 14, tubeY + tubeH / 2 + 10);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+    drawText('CO 通入', tubeX - 44, tubeY + tubeH / 2 - 22, 11, '#9fd8ff', 'center', 0.9);
+
+    // 导管 → 澄清石灰水
+    var beakerX = viewW * 0.70, beakerY = baseY - 156;
+    drawDeliveryTube(tubeX + tubeW - 8, tubeY + tubeH / 2, beakerX + 44, beakerY + 30);
+    var cloud = windowT(t, 0.52, 0.92);
+    drawLimewater(beakerX, beakerY, 130, 140, cloud);
+
+    // 尾气燃烧处理（防 CO 中毒）
+    var tailK = windowT(t, 0.58, 0.80);
+    var tailX = viewW * 0.92, tailY = beakerY + 26;
+    ctx.save();
+    ctx.globalAlpha = 0.30 + tailK * 0.5;
+    ctx.strokeStyle = '#b7e9ff';
+    ctx.lineWidth = 5;
+    ctx.beginPath();
+    ctx.moveTo(beakerX + 130, tailY);
+    ctx.lineTo(tailX - 8, tailY);
+    ctx.stroke();
+    ctx.restore();
+    if (tailK > 0.02) {
+      drawFlame(tailX, tailY - 8, 0.5 + 0.05 * Math.sin(time * 7), tailK);
+      drawText('尾气点燃（防 CO 中毒）', tailX - 18, tailY + 52, 11, '#ffb74d', 'center', tailK);
+    }
+
+    drawPill(viewW * 0.30, tubeY - 52, '条件：' + (m.conditions || '高温'), '#ffe082', 0.95);
+    drawPill(viewW * 0.30, baseY + 26, m.vesselLabel || 'CO + Fe₂O₃（高炉炼铁）', '#90caf9', 0.9);
+    if (cloud > 0.55) {
+      drawPill(beakerX + 65, beakerY - 30, m.productLabel || 'CO₂ 使石灰水变浑浊', '#ffd54f', 0.92);
+    }
+  }
+
+  /** 铁钉与硫酸铜：紫红色铜析出 + 蓝色溶液变浅绿色 */
+  function drawMacroFeCuso4(m, t, time) {
+    var baseY = viewH * 0.82;
+    drawBench(baseY);
+
+    var cx = viewW * 0.38, beakerW = 240, beakerH = 225;
+    var beakerY = baseY - beakerH - 16;
+
+    // 溶液颜色：蓝色 Cu²⁺ → 浅绿色 Fe²⁺
+    var greenK = windowT(t, 0.36, 0.88);
+    var lr = Math.round(70 + 70 * greenK), lg = Math.round(130 + 60 * greenK), lb = Math.round(220 - 90 * greenK);
+    drawBeaker(cx, beakerY, beakerW, beakerH, 0.64, 'rgba(' + lr + ',' + lg + ',' + lb + ',0.42)');
+
+    // 铁钉 + 铜镀层（紫红色）
+    var copperK = windowT(t, 0.30, 0.82);
+    drawNail(cx - 10, beakerY - 4, 180, copperK, 0);
+
+    // 标注颜色变化
+    drawText('蓝色溶液（Cu²⁺）', cx, beakerY + beakerH + 28, 12, '#7fb3ff', 'center', 0.95 - greenK * 0.85);
+    if (greenK > 0.2) {
+      drawText('浅绿色溶液（Fe²⁺）', cx, beakerY + beakerH + 28, 12, '#b9e4a8', 'center', greenK);
+    }
+    if (copperK > 0.3) {
+      drawText('铁钉表面附着紫红色铜', cx + 96, beakerY + 88, 12, '#e8a58a', 'center', copperK);
+    }
+
+    drawPill(cx, beakerY - 50, '条件：' + (m.conditions || '常温 · 不加热'), '#ffe082', 0.95);
+    drawPill(cx, baseY + 26, m.vesselLabel || '铁钉 + 硫酸铜溶液', '#90caf9', 0.9);
+    drawPill(viewW * 0.82, baseY - 120, m.productLabel || 'Cu（紫红色）+ FeSO₄', '#e8a58a', 0.82 + copperK * 0.18);
+  }
+
   // 场景注册表（卡带 macro.scene 选用）
   MACRO_SCENES.combustion = drawMacroCombustion;
   MACRO_SCENES.electrolysis = drawMacroElectrolysis;
@@ -1320,6 +1698,10 @@
   MACRO_SCENES.mg_burn = drawMacroMgBurn;
   MACRO_SCENES.h2o2 = drawMacroH2O2;
   MACRO_SCENES.marble_acid = drawMacroMarbleAcid;
+  MACRO_SCENES.fe_burn = drawMacroFeBurn;
+  MACRO_SCENES.fe_acid = drawMacroFeAcid;
+  MACRO_SCENES.co_reduction = drawMacroCoReduction;
+  MACRO_SCENES.fe_cuso4 = drawMacroFeCuso4;
 
   /* ====================================================================== */
   /* 5. L2 分子动力学层                                                      */
