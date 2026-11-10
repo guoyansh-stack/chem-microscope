@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>初中化学 · 宏微观三层穿透显微镜</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%2312203a'/%3E%3Ccircle cx='32' cy='30' r='12' fill='%23ff6b6b'/%3E%3Ccircle cx='18' cy='44' r='7' fill='%237fd4ff'/%3E%3Ccircle cx='46' cy='44' r='7' fill='%237fd4ff'/%3E%3C/svg%3E" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="app">
+
+    <!-- ========================= 顶栏 ========================= -->
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-badge">🔬</div>
+        <div>
+          <h1>初中化学 · 宏微观三层穿透显微镜</h1>
+          <p>拖动时间轴，在 L1 宏观 / L2 分子 / L3 原子 三层之间自由穿透，看清化学反应的真相</p>
+        </div>
+      </div>
+
+      <nav class="cartridges" aria-label="反应卡带">
+        <button class="cart-btn active" data-cart="h2_combustion" type="button">
+          <span>🔥 氢气燃烧</span>
+          <span class="cart-eq">2H₂ + O₂ → 2H₂O</span>
+        </button>
+        <button class="cart-btn" data-cart="water_electrolysis" type="button">
+          <span>⚡ 水的电解</span>
+          <span class="cart-eq">2H₂O → 2H₂↑ + O₂↑</span>
+        </button>
+      </nav>
+    </header>
+
+    <!-- ========================= 主体 ========================= -->
+    <div class="main">
+
+      <!-- 左：显微镜视场 -->
+      <section class="panel">
+        <div class="zoom-tabs" role="tablist" aria-label="空间尺度切换">
+          <button class="zoom-tab active" data-layer="L1" type="button">
+            L1 宏观实验台
+            <small>肉眼可见的仪器与现象</small>
+          </button>
+          <button class="zoom-tab" data-layer="L2" type="button">
+            L2 分子动力学
+            <small>热运动 · 碰撞 · 断键成键</small>
+          </button>
+          <button class="zoom-tab" data-layer="L3" type="button">
+            L3 原子 / 电子
+            <small>价电子 · 化合价的由来</small>
+          </button>
+        </div>
+
+        <div class="viewport-wrap">
+          <canvas id="viewport" aria-label="反应显微镜视场"></canvas>
+        </div>
+
+        <div class="equation-bar">
+          <div id="eqText">2H₂ + O₂  →点燃→  2H₂O</div>
+          <div id="typeBadge" class="type-badge syn">化合反应 · 多变一 · 合成</div>
+          <div id="summaryText">
+            两种气体（氢气、氧气）点燃后变成一种液体（水），同时放出大量热。
+          </div>
+        </div>
+      </section>
+
+      <!-- 右：解说与图例 -->
+      <aside class="side">
+        <section class="panel card narr">
+          <h2><span class="dot"></span>人话解说卡片</h2>
+          <div class="narr-phase-row">
+            <div id="narrPhase">进度 0%</div>
+          </div>
+          <h3 id="narrTitle">① 反应前 · 稳态</h3>
+          <p id="narrText">
+            氢气分子（H₂）和氧气分子（O₂）在容器里自由漂浮。
+            它们各自“手拉手”（化学键）结合得很稳，暂时谁也不理谁。
+          </p>
+        </section>
+
+        <section class="panel card">
+          <h2><span class="dot" style="background:#ffd54f;box-shadow:0 0 10px #ffd54f"></span>图例</h2>
+          <ul class="legend-list" id="legendList">
+            <li><span class="legend-dot" style="background:#7fd4ff"></span>氢原子 H（个头小、跑得快）</li>
+            <li><span class="legend-dot" style="background:#ff6b6b"></span>氧原子 O（个头大、更稳重）</li>
+            <li><span class="legend-dot" style="background:#9ae6ff"></span>化学键 = 手拉手</li>
+            <li><span class="legend-dot" style="background:#ffe082"></span>共用电子对</li>
+            <li><span class="legend-dot" style="background:#ffd54f"></span>电子</li>
+          </ul>
+        </section>
+
+        <section class="panel card">
+          <h2><span class="dot" style="background:#b39ddb;box-shadow:0 0 10px #b39ddb"></span>怎么玩</h2>
+          <p class="tip">
+            1️⃣ 点上方卡带，选择一个化学反应。<br />
+            2️⃣ 点 L1 / L2 / L3，切换空间尺度。<br />
+            3️⃣ 拖动底部时间轴推杆（或点播放），三个尺度的画
+            面和右边解说会<span style="color:#ffd54f">实时同步演变</span>。<br />
+            4️⃣ 对比「化合」与「分解」两个反应，找找它们的相反之处！
+          </p>
+        </section>
+      </aside>
+    </div>
+
+    <!-- ========================= 时间轴 ========================= -->
+    <section class="panel timeline-panel">
+      <div class="timeline-head">
+        <button id="playBtn" type="button">▶ 播放</button>
+        <div class="timeline-title">
+          反应时间轴推杆 · 0% → 100%（无论在哪个缩放层，拖动它画面都会同步变化）
+        </div>
+        <div id="tLabel">0%</div>
+      </div>
+
+      <div class="slider-wrap">
+        <input id="timeline" type="range" min="0" max="1000" value="0" step="1"
+               aria-label="反应时间轴" />
+      </div>
+
+      <div class="phase-row">
+        <div class="phase-label active">
+          反应前稳态
+          <span>0% ~ 25%</span>
+        </div>
+        <div class="phase-label">
+          激发 · 断键 · 活化能
+          <span>25% ~ 50%</span>
+        </div>
+        <div class="phase-label">
+          原子重组 · 电子转移
+          <span>50% ~ 75%</span>
+        </div>
+        <div class="phase-label">
+          生成物新稳态
+          <span>75% ~ 100%</span>
+        </div>
+      </div>
+    </section>
+
+    <footer class="footer">
+      S1 原型 · 纯 HTML5 + CSS + 原生 JavaScript · 双击 index.html 即可运行 · 无需联网<br />
+      架构：反应插件数据接口（Reaction Cartridge Schema）— 引擎与反应数据解耦，新反应像插卡带一样扩展
+    </footer>
+  </div>
+
+  <script src="reactions.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
