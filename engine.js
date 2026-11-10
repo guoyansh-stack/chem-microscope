@@ -12,7 +12,7 @@
  *   3) 卡带 Schema 校验（CHEM_SCHEMA / validateChemCartridge）
  *
  * 加载顺序（双击 index.html 即可运行，禁用 ES Module）：
- *   data/ch1_water.js → data/ch2_oxygen_carbon.js → data/ch3_metals.js → engine.js
+ *   data/ch1_water.js → data/ch2_oxygen_carbon.js → data/ch3_metals.js → data/ch4_acids_bases_salts.js → engine.js
  *   各卡带文件执行：window.CHEM_CARTRIDGES = window.CHEM_CARTRIDGES || [] 再 push。
  * ========================================================================== */
 (function () {
@@ -58,6 +58,8 @@
     Cu: { color: '#c2704e', glow: '#e8a58a', r: 24, label: 'Cu' },  // 铜 · 紫红
     S:  { color: '#e6c84e', glow: '#fff1a8', r: 21, label: 'S' },   // 硫 · 淡黄
     Zn: { color: '#9aa7b5', glow: '#d5dee6', r: 25, label: 'Zn' },  // 锌 · 银白
+    Na: { color: '#ffa726', glow: '#ffcc80', r: 24, label: 'Na' },  // 钠 · 金橙
+    Ba: { color: '#9ccc65', glow: '#c5e1a5', r: 25, label: 'Ba' },  // 钡 · 苹果绿
     e:  { color: '#ffd54f', glow: '#fff3b0', r: 5, label: 'e' }     // 电子 · 金
   };
 
@@ -1691,6 +1693,380 @@
     drawPill(viewW * 0.82, baseY - 120, m.productLabel || 'Cu（紫红色）+ FeSO₄', '#e8a58a', 0.82 + copperK * 0.18);
   }
 
+  /* ---------------- L1 新增场景（S4 · 酸、碱、盐与离子反应）：中和滴定 / 蓝色沉淀 / 白色沉淀 / 碳酸钠剧烈产气 ---------------- */
+
+  /** 胶头滴管（尖嘴朝下，squeezeK 表示捏胶头挤出液滴的程度），尖端在 (x, y) */
+  function drawDropper(x, y, squeezeK, liquidColor) {
+    ctx.save();
+    // 胶头（被捏扁一点）
+    var bg = ctx.createLinearGradient(x - 15, y - 100, x + 15, y - 60);
+    bg.addColorStop(0, '#9e7d6c');
+    bg.addColorStop(1, '#5d4037');
+    ctx.fillStyle = bg;
+    ctx.beginPath();
+    ctx.ellipse(x, y - 80 + squeezeK * 4, 15, 18 - squeezeK * 5, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // 玻璃管
+    var glass = ctx.createLinearGradient(x - 7, y - 66, x + 7, y - 8);
+    glass.addColorStop(0, 'rgba(190,220,250,0.55)');
+    glass.addColorStop(0.5, 'rgba(140,185,225,0.32)');
+    glass.addColorStop(1, 'rgba(190,220,250,0.55)');
+    ctx.fillStyle = glass;
+    roundRectPath(x - 7, y - 66, 14, 56, 5);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(185,215,255,0.55)';
+    ctx.lineWidth = 1.6;
+    ctx.stroke();
+    // 尖嘴
+    ctx.beginPath();
+    ctx.moveTo(x - 5, y - 10);
+    ctx.lineTo(x + 5, y - 10);
+    ctx.lineTo(x + 1.6, y);
+    ctx.lineTo(x - 1.6, y);
+    ctx.closePath();
+    ctx.fillStyle = 'rgba(190,220,250,0.65)';
+    ctx.fill();
+    // 管内液柱
+    if (liquidColor) {
+      ctx.fillStyle = liquidColor;
+      roundRectPath(x - 4, y - 62 + squeezeK * 10, 8, 48 - squeezeK * 10, 3);
+      ctx.fill();
+    }
+    // 尖端悬滴
+    if (squeezeK > 0.15 && squeezeK < 0.92) {
+      var dr = 4.2 + squeezeK * 2.2;
+      ctx.beginPath();
+      ctx.arc(x, y + dr * 0.8, dr, 0, Math.PI * 2);
+      ctx.fillStyle = liquidColor || 'rgba(160,215,245,0.9)';
+      ctx.fill();
+    }
+    ctx.restore();
+    ctx.globalAlpha = 1;
+  }
+
+  /** 滴落的液滴（自上而下，与 drawBubbles 相反） */
+  function drawDrip(x, yTop, yBottom, power, time, seedOffset, color) {
+    if (power <= 0.01) return;
+    var count = Math.min(9, Math.floor(2 + power * 8));
+    for (var i = 0; i < count; i++) {
+      var r0 = seeded(i * 3.7 + seedOffset * 11);
+      var speed = 0.24 + r0 * 0.24;
+      var phase = (time * speed + seeded(i * 5.3 + seedOffset)) % 1;
+      var y = lerp(yTop, yBottom - 8, phase);
+      var xj = x + (seeded(i * 9.1 + seedOffset * 3) - 0.5) * 10;
+      var r = 3.2 + r0 * 2.4;
+      var alpha = Math.sin(phase * Math.PI) * 0.9 * Math.min(1, power * 1.6);
+      if (alpha <= 0.01) continue;
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      ctx.fillStyle = color || 'rgba(170,215,245,0.95)';
+      // 上尖下圆的水滴形
+      ctx.beginPath();
+      ctx.moveTo(xj, y - r * 2.0);
+      ctx.quadraticCurveTo(xj + r, y - r * 0.2, xj, y + r);
+      ctx.quadraticCurveTo(xj - r, y - r * 0.2, xj, y - r * 2.0);
+      ctx.fill();
+      ctx.restore();
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  /** 玻璃搅拌棒（斜插微摆） */
+  function drawStirRod(x, yTop, yBottom, angle, time) {
+    ctx.save();
+    ctx.translate(x, (yTop + yBottom) / 2);
+    ctx.rotate(angle + Math.sin(time * 1.6) * 0.035);
+    var g = ctx.createLinearGradient(-7, 0, 7, 0);
+    g.addColorStop(0, 'rgba(195,225,250,0.28)');
+    g.addColorStop(0.5, 'rgba(230,245,255,0.55)');
+    g.addColorStop(1, 'rgba(195,225,250,0.28)');
+    ctx.fillStyle = g;
+    roundRectPath(-6, yTop - (yTop + yBottom) / 2, 12, yBottom - yTop, 6);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(200,230,255,0.45)';
+    ctx.lineWidth = 1.4;
+    ctx.stroke();
+    ctx.restore();
+    ctx.globalAlpha = 1;
+  }
+
+  /** 沉淀层（底部堆积）+ 缓缓下沉的颗粒；flocculent=true 絮状，false 晶粒 */
+  function drawPrecipitate(x, yBottom, w, k, color, flocculent, time) {
+    if (k <= 0.02) return;
+    ctx.save();
+    // 堆积层
+    var layerH = 12 + k * 26;
+    ctx.globalAlpha = 0.55 + k * 0.42;
+    ctx.fillStyle = color;
+    roundRectPath(x - w / 2, yBottom - layerH, w, layerH, 9);
+    ctx.fill();
+    // 堆积面颗粒
+    ctx.globalAlpha = 0.35 + k * 0.4;
+    for (var i = 0; i < 14; i++) {
+      var px = x - w / 2 + 10 + seeded(i * 3.3) * (w - 20);
+      var py = yBottom - layerH - seeded(i * 5.1) * 9;
+      var pr = (flocculent ? 5.5 : 3.2) + seeded(i * 7.7) * (flocculent ? 6 : 3);
+      ctx.beginPath();
+      ctx.arc(px, py, pr, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // 下沉中的颗粒
+    var fall = Math.min(1, k * 1.25);
+    for (var j = 0; j < 12; j++) {
+      var phase = (time * (0.10 + seeded(j * 2.9) * 0.12) + seeded(j * 4.1)) % 1;
+      var fy = lerp(yBottom - layerH - 130, yBottom - layerH, phase * fall);
+      var fx = x + (seeded(j * 6.3) - 0.5) * (w - 30);
+      var alpha = (0.12 + 0.55 * phase) * fall;
+      if (alpha <= 0.02) continue;
+      ctx.globalAlpha = alpha;
+      ctx.beginPath();
+      ctx.arc(fx, fy, (flocculent ? 4.5 : 2.6) + seeded(j * 8.3) * (flocculent ? 5 : 2.4), 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+    ctx.globalAlpha = 1;
+  }
+
+  /** 试管（竖直圆底），x 为中轴，yBottom 为管底 */
+  function drawTestTube(x, yBottom, w, h, liquidRatio, liquidColor) {
+    var r = w / 2;
+    ctx.save();
+    roundRectPath(x - r, yBottom - h, w, h, r);
+    ctx.fillStyle = 'rgba(160,200,240,0.10)';
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(185,215,255,0.55)';
+    ctx.lineWidth = 2.4;
+    ctx.stroke();
+    if (liquidRatio > 0.02) {
+      var lh = (h - 22) * liquidRatio;
+      ctx.fillStyle = liquidColor || 'rgba(120,190,235,0.30)';
+      roundRectPath(x - r + 5, yBottom - 12 - lh, w - 10, lh, (w - 10) / 2.4);
+      ctx.fill();
+    }
+    ctx.restore();
+    ctx.globalAlpha = 1;
+  }
+
+  /** 微热温度计（25→35℃，中和放热专用；fill 0~1） */
+  function drawMildThermometer(x, y, h, fill) {
+    var w = 30;
+    roundRectPath(x - w / 2, y, w, h, 14);
+    ctx.fillStyle = 'rgba(220,235,255,0.14)';
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(190,215,250,0.5)';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    // 球部
+    ctx.beginPath();
+    ctx.arc(x, y + h + 14, 19, 0, Math.PI * 2);
+    ctx.fillStyle = '#ff6b6b';
+    ctx.fill();
+    // 水银柱
+    var top = y + h - (h - 18) * fill;
+    var hg = ctx.createLinearGradient(0, top, 0, y + h);
+    hg.addColorStop(0, '#ff8a80');
+    hg.addColorStop(1, '#ff5252');
+    ctx.fillStyle = hg;
+    roundRectPath(x - 8, top, 16, y + h - top + 8, 8);
+    ctx.fill();
+    // 刻度
+    for (var i = 0; i <= 5; i++) {
+      var yy = y + 16 + (h - 32) * (i / 5);
+      ctx.fillStyle = 'rgba(220,235,255,0.55)';
+      ctx.fillRect(x + 9, yy, 10, 2);
+    }
+    drawText('温度计 · 微热', x, y - 14, 12, '#ffd9a0', 'center');
+    drawText(Math.round(25 + fill * 10) + '℃', x, y + h + 46, 14, '#ffb3b3', 'center');
+    drawText('中和反应放热', x, y + h + 68, 11, '#ffb74d', 'center', 0.45 + fill * 0.55);
+  }
+
+  /** 氢氧化钠与盐酸中和：酚酞红 → 无色突变 + 温度计微热 */
+  function drawMacroNaohHcl(m, t, time) {
+    var baseY = viewH * 0.82;
+    drawBench(baseY);
+
+    var cx = viewW * 0.38, beakerW = 250, beakerH = 230;
+    var beakerY = baseY - beakerH - 16;
+
+    // 溶液：滴有酚酞的 NaOH（红色）→ 恰好中和后无色（终点突变窗）
+    var clearK = windowT(t, 0.55, 0.63);
+    var pr = Math.round(255 - 130 * clearK);
+    var pg = Math.round(115 + 70 * clearK);
+    var pb = Math.round(165 + 65 * clearK);
+    drawBeaker(cx, beakerY, beakerW, beakerH, 0.62,
+      'rgba(' + pr + ',' + pg + ',' + pb + ',' + (0.50 - clearK * 0.24) + ')');
+
+    // 玻璃棒搅拌
+    drawStirRod(cx + 18, beakerY - 6, beakerY + beakerH - 36, 0.16, time);
+
+    // 胶头滴管逐滴加入稀盐酸
+    var dripK = windowT(t, 0.16, 0.52) * (1 - windowT(t, 0.55, 0.68));
+    drawDropper(cx + 72, beakerY - 4, dripK, 'rgba(150,210,240,0.8)');
+    if (dripK > 0.02) {
+      drawDrip(cx + 72, beakerY + 8, beakerY + 62, dripK, time, 3, 'rgba(165,215,245,0.9)');
+    }
+
+    // 颜色突变标注
+    drawText('滴有酚酞的 NaOH 溶液（红色）', cx, beakerY + beakerH + 30, 12, '#ff9bb5', 'center', 0.95 - clearK * 0.9);
+    if (clearK > 0.3) {
+      drawText('红色突变为无色（恰好完全中和！）', cx, beakerY + beakerH + 30, 12, '#b7e9ff', 'center', clearK);
+    }
+
+    // 温度计（微热）
+    drawMildThermometer(viewW * 0.82, viewH * 0.15, viewH * 0.42, windowT(t, 0.30, 0.80) * 0.55);
+
+    drawPill(cx, beakerY - 52, '条件：' + (m.conditions || '常温 · 边滴边搅拌'), '#ffe082', 0.95);
+    drawPill(cx, baseY + 26, m.vesselLabel || 'NaOH 溶液 + 稀盐酸', '#90caf9', 0.9);
+    if (clearK > 0.55) {
+      drawPill(viewW * 0.82, baseY - 30, m.productLabel || 'NaCl + H₂O（微热）', '#b7e9ff', 0.9);
+    }
+  }
+
+  /** 硫酸铜与氢氧化钠：蓝色絮状沉淀 Cu(OH)₂ */
+  function drawMacroNaohCuso4(m, t, time) {
+    var baseY = viewH * 0.82;
+    drawBench(baseY);
+
+    var cx = viewW * 0.40, beakerW = 250, beakerH = 235;
+    var beakerY = baseY - beakerH - 16;
+
+    // 溶液：蓝色 Cu²⁺ → 蓝色褪去（Cu²⁺ 被 OH⁻ 沉淀掉）
+    var fadeK = windowT(t, 0.32, 0.86);
+    var br = Math.round(70 + 95 * fadeK), bg2 = Math.round(130 + 75 * fadeK), bb = Math.round(220 - 45 * fadeK);
+    drawBeaker(cx, beakerY, beakerW, beakerH, 0.64,
+      'rgba(' + br + ',' + bg2 + ',' + bb + ',' + (0.44 - fadeK * 0.16) + ')');
+
+    // 胶头滴管滴加无色 NaOH 溶液
+    var dripK = windowT(t, 0.14, 0.50) * (1 - windowT(t, 0.55, 0.68));
+    drawDropper(cx + 72, beakerY - 4, dripK, 'rgba(210,235,250,0.75)');
+    if (dripK > 0.02) {
+      drawDrip(cx + 72, beakerY + 8, beakerY + 64, dripK, time, 5, 'rgba(215,238,250,0.85)');
+    }
+
+    // 蓝色絮状沉淀
+    var pptK = windowT(t, 0.28, 0.80);
+    drawPrecipitate(cx, beakerY + beakerH - 12, beakerW - 36, pptK, '#5c9fd6', true, time);
+
+    // 标注
+    drawText('蓝色溶液（Cu²⁺）', cx, beakerY + beakerH + 30, 12, '#7fb3ff', 'center', 0.95 - fadeK * 0.85);
+    if (pptK > 0.25) {
+      drawText('蓝色絮状沉淀 Cu(OH)₂↓', cx, beakerY + beakerH + 30, 12, '#8fc4f0', 'center', pptK);
+    }
+    if (fadeK > 0.5) {
+      drawText('上层溶液蓝色褪去', cx + 24, beakerY + 38, 11, '#b7e9ff', 'center', fadeK);
+    }
+
+    drawPill(cx, beakerY - 52, '条件：' + (m.conditions || '常温 · 不加热'), '#ffe082', 0.95);
+    drawPill(cx, baseY + 26, m.vesselLabel || 'CuSO₄ 溶液 + NaOH 溶液', '#90caf9', 0.9);
+    if (pptK > 0.55) {
+      drawPill(viewW * 0.83, baseY - 110, m.productLabel || '蓝色絮状沉淀 Cu(OH)₂↓', '#8fc4f0', 0.9);
+    }
+  }
+
+  /** 氯化钡与硫酸钠：白色沉淀 BaSO₄（加稀硝酸不溶解） */
+  function drawMacroBaCl2So4(m, t, time) {
+    var baseY = viewH * 0.82;
+    drawBench(baseY);
+
+    // 左：混合烧杯（两种无色溶液 → 白色沉淀）
+    var cx = viewW * 0.33, beakerW = 250, beakerH = 225;
+    var beakerY = baseY - beakerH - 16;
+    drawBeaker(cx, beakerY, beakerW, beakerH, 0.62, 'rgba(120,190,235,0.20)');
+
+    // 滴加另一种无色溶液
+    var dripK = windowT(t, 0.14, 0.48) * (1 - windowT(t, 0.52, 0.68));
+    drawDropper(cx + 68, beakerY - 4, dripK, 'rgba(215,238,250,0.8)');
+    if (dripK > 0.02) {
+      drawDrip(cx + 68, beakerY + 8, beakerY + 62, dripK, time, 7, 'rgba(220,240,250,0.9)');
+    }
+
+    // 白色沉淀（瞬间产生、沉底）
+    var pptK = windowT(t, 0.26, 0.66);
+    drawPrecipitate(cx, beakerY + beakerH - 12, beakerW - 36, pptK, '#e8eef5', false, time);
+    drawText('白色沉淀 BaSO₄↓（既不溶于水也不溶于酸）', cx, beakerY + beakerH + 30, 12, '#e8eef5', 'center', 0.35 + pptK * 0.65);
+
+    // 右：稀硝酸检验（试管 + 滴管），沉淀不溶解
+    var tubeX = viewW * 0.79, tubeY = baseY - 14;
+    drawTestTube(tubeX, tubeY, 76, 195, 0.40, 'rgba(225,236,246,0.55)');
+    var acidK = windowT(t, 0.62, 0.84);
+    drawDropper(tubeX + 2, tubeY - 195 - 4, acidK, 'rgba(215,238,250,0.8)');
+    if (acidK > 0.02 && acidK < 0.98) {
+      drawDrip(tubeX + 2, tubeY - 192, tubeY - 130, acidK, time, 9, 'rgba(220,240,250,0.9)');
+    }
+    drawText('滴加稀硝酸', tubeX, tubeY - 232, 11, '#ffd9a0', 'center', 0.45 + acidK * 0.55);
+    drawText('沉淀不溶解！', tubeX, tubeY + 34, 12, '#fff3c4', 'center', windowT(t, 0.72, 0.88));
+
+    drawPill(cx, beakerY - 52, '条件：' + (m.conditions || '常温 · 两种无色溶液混合'), '#ffe082', 0.95);
+    drawPill(cx, baseY + 26, m.vesselLabel || 'BaCl₂ 溶液 + Na₂SO₄ 溶液', '#90caf9', 0.9);
+    if (pptK > 0.55) {
+      drawPill(viewW * 0.33, beakerY - 88, m.productLabel || '白色沉淀 BaSO₄↓', '#e8eef5', 0.92);
+    }
+  }
+
+  /** 碳酸钠与稀盐酸：瞬间剧烈冒泡（对比大理石平缓产气） */
+  function drawMacroNa2co3Hcl(m, t, time) {
+    var baseY = viewH * 0.82;
+    drawBench(baseY);
+
+    var cx = viewW * 0.34, beakerW = 250, beakerH = 235;
+    var beakerY = baseY - beakerH - 16;
+
+    // 碳酸钠溶液（无色，CO₃²⁻ 已自由游离）
+    drawBeaker(cx, beakerY, beakerW, beakerH, 0.60, 'rgba(120,190,235,0.24)');
+    drawText('Na₂CO₃ 溶液（纯碱 · CO₃²⁻ 已自由游离）', cx, beakerY + beakerH + 30, 11, '#9fd8ff', 'center', 0.92);
+
+    // 迅速倒入稀盐酸（液流）
+    var pourK = windowT(t, 0.10, 0.26);
+    ctx.save();
+    ctx.globalAlpha = 0.30 + pourK * 0.55;
+    ctx.strokeStyle = 'rgba(180,220,250,0.85)';
+    ctx.lineWidth = 7;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(cx + 98, beakerY - 70);
+    ctx.lineTo(cx + 52, beakerY + 24);
+    ctx.stroke();
+    ctx.restore();
+    drawText('倒入稀盐酸', cx + 122, beakerY - 82, 11, '#b7e9ff', 'center', 0.45 + pourK * 0.55);
+
+    // 剧烈气泡（功率远高于大理石的平缓产气）
+    var bubblePower = windowT(t, 0.14, 0.30);
+    if (bubblePower > 0.01) {
+      drawBubbles(cx - 46, beakerY + 36, beakerY + beakerH - 32, bubblePower * 2.8, time, 2);
+      drawBubbles(cx, beakerY + 28, beakerY + beakerH - 26, bubblePower * 3.2, time, 6);
+      drawBubbles(cx + 46, beakerY + 36, beakerY + beakerH - 32, bubblePower * 2.6, time, 10);
+      // 气泡冲出液面
+      drawBubbles(cx - 12, beakerY - 54, beakerY + 6, bubblePower * 1.1, time, 14);
+      drawBubbles(cx + 28, beakerY - 46, beakerY + 8, bubblePower * 0.9, time, 18);
+    }
+
+    // “剧烈！”爆闪
+    var burst = windowT(t, 0.16, 0.26) * (1 - windowT(t, 0.42, 0.58));
+    if (burst > 0.02) {
+      drawStarburst(cx, beakerY + 62, 110 + 16 * Math.sin(time * 5), burst * 0.55, time, '#bfe8ff');
+      drawText('瞬间剧烈冒泡！', cx, beakerY - 92, 14, '#7fd4ff', 'center', burst);
+    }
+
+    // 右侧对比卡：大理石 vs 纯碱
+    var panelX = viewW * 0.78, panelY = viewH * 0.24;
+    ctx.save();
+    ctx.globalAlpha = 0.88;
+    roundRectPath(panelX - 132, panelY - 44, 264, 178, 12);
+    ctx.fillStyle = 'rgba(16,28,48,0.72)';
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(127,212,255,0.35)';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+    ctx.restore();
+    drawText('对比实验室制 CO₂', panelX, panelY - 18, 13, '#ffd54f', 'center', 0.95);
+    drawText('块状大理石：反应平缓、便于收集', panelX, panelY + 16, 12, '#b7e9ff', 'center', 0.9);
+    drawText('纯碱粉末：反应太剧烈、难以收集', panelX, panelY + 48, 12, '#ff9b9b', 'center', 0.9);
+    drawText('→ 所以实验室制 CO₂ 不用纯碱！', panelX, panelY + 88, 12, '#ffe082', 'center', 0.92);
+
+    drawPill(cx, beakerY - 52, '条件：' + (m.conditions || '常温 · 不加热'), '#ffe082', 0.95);
+    drawPill(cx, baseY + 26, m.vesselLabel || 'Na₂CO₃ + 稀盐酸', '#90caf9', 0.9);
+  }
+
   // 场景注册表（卡带 macro.scene 选用）
   MACRO_SCENES.combustion = drawMacroCombustion;
   MACRO_SCENES.electrolysis = drawMacroElectrolysis;
@@ -1702,6 +2078,10 @@
   MACRO_SCENES.fe_acid = drawMacroFeAcid;
   MACRO_SCENES.co_reduction = drawMacroCoReduction;
   MACRO_SCENES.fe_cuso4 = drawMacroFeCuso4;
+  MACRO_SCENES.naoh_hcl = drawMacroNaohHcl;
+  MACRO_SCENES.naoh_cuso4 = drawMacroNaohCuso4;
+  MACRO_SCENES.bacl2_so4 = drawMacroBaCl2So4;
+  MACRO_SCENES.na2co3_hcl = drawMacroNa2co3Hcl;
 
   /* ====================================================================== */
   /* 5. L2 分子动力学层                                                      */
