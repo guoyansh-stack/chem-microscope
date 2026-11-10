@@ -43,6 +43,28 @@
   }
 
   /* ====================================================================== */
+  /* 0.5 安全净空区（Safe Y-Zone）与坐标映射                                 */
+  /*     画布顶部留给固定标题、底部留给解说框/相位条，                        */
+  /*     归一化坐标 y∈[0,1] 只映射进中间的“纯净绘制带”，                      */
+  /*     粒子与浮动胶囊从此不再与标题/解说框发生任何重叠。                     */
+  /* ====================================================================== */
+
+  var TITLE_ZONE = 66;      // 左上角两行层标题占用高度（含呼吸空间）
+  var PHASE_BAR_ZONE = 28;  // 底部相位条 / 播放头占用高度
+  var SAFE_GAP = 8;         // 解说框与内容区之间的呼吸空间
+  var PILL_PAD = 12;        // 胶囊距画布左右边缘的安全边距
+
+  var safe = { top: 0, bottom: 0 };
+
+  function mapX(nx) { return nx * viewW; }
+
+  function mapY(ny) {
+    var h = viewH - safe.top - safe.bottom;
+    if (h < 40) h = 40;
+    return safe.top + clamp01(ny) * h;
+  }
+
+  /* ====================================================================== */
   /* 1. 原子视觉字典（引擎级固定配色，卡带只说元素符号）                     */
   /* ====================================================================== */
 
@@ -313,8 +335,19 @@
     ctx.globalAlpha = 1;
   }
 
-  /** 圆角胶囊标签 */
+  /** 圆角胶囊标签 —— 统一入队，由 flushPills() 在单帧最顶层绘制 */
+  var pillQueue = [];
+
   function drawPill(x, y, text, color, alpha, align) {
+    alpha = alpha == null ? 1 : alpha;
+    if (alpha <= 0.01 || !text) return;
+    pillQueue.push({
+      x: x, y: y, text: String(text), color: color, alpha: alpha, align: align
+    });
+  }
+
+  /** 胶囊实际绘制（含边界钳制，防止贴边截断 / 撞上标题与底部解说框） */
+  function drawPillNow(x, y, text, color, alpha, align) {
     alpha = alpha == null ? 1 : alpha;
     if (alpha <= 0.01) return;
     ctx.save();
@@ -322,9 +355,28 @@
     ctx.font = '600 13px "Microsoft YaHei", "PingFang SC", sans-serif';
     var w = ctx.measureText(text).width + 22;
     var h = 26;
+    var pad = PILL_PAD;
+
+    // x 轴钳制：任何文字绝不超出画布边框
+    if (align === 'left') {
+      x = Math.max(pad, Math.min(viewW - pad - w, x));
+    } else if (align === 'right') {
+      x = Math.max(pad + w, Math.min(viewW - pad, x));
+    } else {
+      x = Math.max(pad + w / 2, Math.min(viewW - pad - w / 2, x));
+    }
+
+    // y 轴安全区钳制：不撞左上角标题，也不压底部解说框 / 相位条
+    var minY = safe.top + h / 2;
+    var maxY = viewH - safe.bottom - h / 2;
+    if (maxY < minY) {
+      minY = maxY = Math.max(h / 2, Math.min(viewH - h / 2, y));
+    }
+    y = Math.max(minY, Math.min(maxY, y));
+
     var left = align === 'right' ? x - w : align === 'left' ? x : x - w / 2;
     roundRectPath(left, y - h / 2, w, h, 13);
-    ctx.fillStyle = 'rgba(12,20,36,0.82)';
+    ctx.fillStyle = 'rgba(12,20,36,0.90)';
     ctx.fill();
     ctx.strokeStyle = color;
     ctx.lineWidth = 1.4;
@@ -335,6 +387,31 @@
     ctx.fillText(text, left + w / 2, y + 1);
     ctx.restore();
     ctx.globalAlpha = 1;
+  }
+
+  /**
+   * 单帧胶囊总出口：同文本 36px 内合并居中（防同类键标签堆叠），
+   * 然后统一绘制在最顶层。
+   */
+  function flushPills() {
+    if (!pillQueue.length) return;
+    var kept = [];
+    pillQueue.forEach(function (p) {
+      for (var i = 0; i < kept.length; i++) {
+        var k = kept[i];
+        if (k.text === p.text && dist(k.x, k.y, p.x, p.y) < 36) {
+          k.x = (k.x + p.x) / 2;
+          k.y = (k.y + p.y) / 2;
+          k.alpha = Math.max(k.alpha, p.alpha);
+          return;
+        }
+      }
+      kept.push(p);
+    });
+    kept.forEach(function (p) {
+      drawPillNow(p.x, p.y, p.text, p.color, p.alpha, p.align);
+    });
+    pillQueue.length = 0;
   }
 
   function drawText(text, x, y, size, color, align, alpha, weight) {
@@ -374,6 +451,11 @@
 
   function renderMacro(cartridge, t, time) {
     var m = cartridge.macro;
+
+    // L1 无画布内标题：只避开底部相位条
+    safe.top = 4;
+    safe.bottom = PHASE_BAR_ZONE;
+
     // 背景
     var bg = ctx.createLinearGradient(0, 0, 0, viewH);
     bg.addColorStop(0, '#0b1220');
@@ -393,6 +475,9 @@
       drawPill(18, viewH - 92 - (ph.length - 1 - i) * 34,
         (a > 0.5 ? '✓ ' : '· ') + ph[i].label, '#b39ddb', 0.32 + a * 0.68, 'left');
     }
+
+    // 全部胶囊置顶统一绘制
+    flushPills();
   }
 
   /** 氢气燃烧：集气瓶 + 点火 + 火焰 + 水雾 + 温度计 */
@@ -2104,7 +2189,7 @@
     var phase = (atom.id || 'a').charCodeAt(0) * 0.7 + (atom.id || '').length;
     x += Math.sin(time * 1.7 + phase) * 0.008 * amp;
     y += Math.cos(time * 1.45 + phase * 1.3) * 0.010 * amp;
-    return [x * viewW, y * viewH];
+    return [mapX(x), mapY(y)];
   }
 
   /** 计算键在 t 时刻的视觉状态（支持 formAt / breakAt 同时存在：先成后断） */
@@ -2145,23 +2230,25 @@
   function renderMolecular(cartridge, t, time) {
     var mol = cartridge.molecular;
 
-    // 背景：微观“视场”
+    // 安全净空区：顶部留给层标题，底部留给解说框 + 相位条
+    safe.top = TITLE_ZONE;
+    safe.bottom = PHASE_BAR_ZONE + 2 + 34 + SAFE_GAP;
+
+    // ① 背景：微观“视场” + 网格光晕
     var bg = ctx.createRadialGradient(viewW / 2, viewH / 2, 40, viewW / 2, viewH / 2, viewW * 0.72);
     bg.addColorStop(0, '#13233c');
     bg.addColorStop(1, '#080e1a');
     ctx.fillStyle = bg;
     ctx.fillRect(0, 0, viewW, viewH);
-
-    // 视场圆环 + 网格点
     drawMicroscopeFrame();
 
-    // 坐标映射缓存
+    // 坐标映射缓存（已收敛进安全净空区）
     var pos = {};
     mol.atoms.forEach(function (a) {
       pos[a.id] = atomPos(a, t, time);
     });
 
-    // 键（先画键，再画原子，让原子盖在键上）
+    // ② 化学键连线 + 断键火花
     mol.bonds.forEach(function (b) {
       var st = bondState(b, t);
       if (!st.visible) return;
@@ -2180,7 +2267,7 @@
       }
     });
 
-    // 原子
+    // ③ 原子球体与符号（胶囊入队，稍后置顶）
     mol.atoms.forEach(function (a) {
       var p = pos[a.id];
       if (a.catalyst) drawCatalystRing(p[0], p[1], time, 1);
@@ -2188,12 +2275,13 @@
       if (a.catalyst) drawPill(p[0], p[1] - 52, '催化剂', '#b39ddb', 0.9);
     });
 
-    // 阶段字幕
-    drawCaption(mol.captions, t);
-
-    // 左上角缩放标识
+    // ⑤ HUD：左上角层标题 + 底部解说框（占独立底带，与内容零重叠）
     drawText('L2 · 分子动力学层', 22, 28, 15, '#7fd4ff', 'left', 0.9);
     drawText('看得见：分子热运动 · 有效碰撞 · 旧键断裂 · 新键形成', 22, 52, 12, '#8fa3c8', 'left', 0.85);
+    drawCaption(mol.captions, t);
+
+    // ⑤ 键标签与浮动解说胶囊永远在最顶层
+    flushPills();
   }
 
   /** 催化剂光环（脉动虚线圈） */
@@ -2242,8 +2330,12 @@
     ctx.globalAlpha = 0.92;
     ctx.font = '600 15px "Microsoft YaHei", "PingFang SC", sans-serif';
     var text = cur.text;
-    var w = ctx.measureText(text).width + 36;
-    roundRectPath(viewW / 2 - w / 2, viewH - 52, w, 34, 17);
+    var h = 34;
+    var w = Math.min(ctx.measureText(text).width + 36, viewW - PILL_PAD * 2);
+    // 独立底部解说带：位于相位条正上方，粒子映射区之外
+    var boxTop = viewH - PHASE_BAR_ZONE - 2 - h;
+    var left = Math.max(PILL_PAD, Math.min(viewW - PILL_PAD - w, viewW / 2 - w / 2));
+    roundRectPath(left, boxTop, w, h, 17);
     ctx.fillStyle = 'rgba(10,18,32,0.80)';
     ctx.fill();
     ctx.strokeStyle = 'rgba(127,212,255,0.45)';
@@ -2252,7 +2344,7 @@
     ctx.fillStyle = '#e8f4ff';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(text, viewW / 2, viewH - 35);
+    ctx.fillText(text, left + w / 2, boxTop + h / 2);
     ctx.restore();
     ctx.globalAlpha = 1;
   }
@@ -2264,21 +2356,28 @@
   function renderAtomic(cartridge, t, time) {
     var at = cartridge.atomic;
 
+    // 先量出底部结论框高度，收敛出中间纯净绘制带
+    var wrap = at.takeaway ? wrapText(at.takeaway, viewW - 80) : [];
+    var boxH = wrap.length ? 26 + wrap.length * 20 : 0;
+    safe.top = TITLE_ZONE;
+    safe.bottom = PHASE_BAR_ZONE + 2 + boxH + (boxH > 0 ? SAFE_GAP : 0);
+
+    // ① 背景网格 / 光晕
     var bg = ctx.createRadialGradient(viewW / 2, viewH / 2, 20, viewW / 2, viewH / 2, viewW * 0.8);
     bg.addColorStop(0, '#151033');
     bg.addColorStop(0.55, '#0c1026');
     bg.addColorStop(1, '#06080f');
     ctx.fillStyle = bg;
     ctx.fillRect(0, 0, viewW, viewH);
-
     drawMicroscopeFrame();
 
+    // 坐标映射缓存（已收敛进安全净空区）
     var pos = {};
     at.atoms.forEach(function (a) {
       pos[a.id] = atomPos(a, t, time);
     });
 
-    // 先画键与共用电子对
+    // ② 化学键连线 / 离子键虚线 + 断键火花（键标签入队，⑤ 置顶绘制）
     at.bonds.forEach(function (b) {
       var st = bondState(b, t);
       if (!st.visible) return;
@@ -2312,6 +2411,29 @@
       if (st.breaking && st.breakK != null) {
         drawBreakSpark((pa[0] + pb[0]) / 2, (pa[1] + pb[1]) / 2, st.breakK, time);
       }
+      if (st.breaking && st.breakK > 0.2 && st.breakK < 0.95) {
+        drawPill((pa[0] + pb[0]) / 2, (pa[1] + pb[1]) / 2 - 34, '共用电子对散伙', '#ffd54f', 0.85);
+      }
+    });
+
+    // ③ 原子球体与符号（含催化剂光环）
+    at.atoms.forEach(function (a) {
+      var p = pos[a.id];
+      if (a.catalyst) drawCatalystRing(p[0], p[1], time, 1);
+      drawAtom(p[0], p[1], a.el, 1, 1, a.catalyst ? a.label : undefined);
+      if (a.catalyst) drawPill(p[0], p[1] - 52, '催化剂 MnO₂', '#b39ddb', 0.9);
+    });
+
+    // ④ 外层电子轨道与电子点（轨道线 → 共用电子对 → 转移电子 → 各层电子）
+    at.atoms.forEach(function (a) {
+      if (!a.catalyst) drawShellOrbits(a, pos[a.id]);
+    });
+    at.bonds.forEach(function (b) {
+      if (b.ionic) return;
+      var st = bondState(b, t);
+      if (!st.visible) return;
+      var pa = pos[b.a], pb = pos[b.b];
+      if (!pa || !pb) return;
       // 共用电子对
       var pairs = b.pairs || (b.order === 2 ? 2 : 1);
       var pairAlpha = st.alpha;
@@ -2327,55 +2449,32 @@
         drawElectron(mx + ox + wob, my + oy, 5, pairAlpha);
         drawElectron(mx + ox - wob * 0.6, my + oy - wob, 5, pairAlpha);
       }
-      if (st.breaking && st.breakK > 0.2 && st.breakK < 0.95) {
-        drawPill((pa[0] + pb[0]) / 2, (pa[1] + pb[1]) / 2 - 34, '共用电子对散伙', '#ffd54f', 0.85);
-      }
     });
-
-    // 电子转移动画
+    // 电子转移动画（电子点在④，说明胶囊入队在⑤）
     (at.transfers || []).forEach(function (tr) {
       var k = windowT(t, tr.window[0], tr.window[1]);
       if (k <= 0.01 || k >= 0.99) return;
-      var x = lerp(tr.from[0], tr.to[0], k) * viewW;
-      var y = lerp(tr.from[1], tr.to[1], k) * viewH;
+      var x = mapX(lerp(tr.from[0], tr.to[0], k));
+      var y = mapY(lerp(tr.from[1], tr.to[1], k));
       drawElectron(x, y, 6, 0.95);
       drawElectron(x - 12, y + 8, 4, 0.6);
       if (tr.label) {
         drawPill(x, y - 30, tr.label, '#ffd54f', 0.9);
       }
     });
-
-    // 原子核 + 电子层
     at.atoms.forEach(function (a) {
-      var p = pos[a.id];
-      if (a.catalyst) drawCatalystRing(p[0], p[1], time, 1);
-      drawAtomWithShells(a, p, t, time);
+      if (!a.catalyst) drawShellElectrons(a, pos[a.id], t, time);
     });
 
-    // 标注（限时显示：淡入后自动淡出，避免叠字）
-    (at.labels || []).forEach(function (lb) {
-      var alpha = windowT(t, lb.at - 0.01, lb.at + 0.05) *
-        (1 - windowT(t, lb.at + 0.18, lb.at + 0.28));
-      if (alpha <= 0.01) return;
-      var x = lb.pos[0] * viewW;
-      var y = lb.pos[1] * viewH;
-      if (lb.anchor) {
-        drawLeaderLine(x, y, lb.anchor[0] * viewW, lb.anchor[1] * viewH, '#ffd54f', alpha * 0.7);
-      }
-      drawPill(x, y, lb.text, '#ffe082', alpha);
-    });
-
+    // ⑤ HUD：左上角层标题 + 底部结论框（独立底带，内容区零重叠）
     drawText('L3 · 原子 / 电子重排层', 22, 28, 15, '#ffe082', 'left', 0.9);
     drawText('看得见：价电子 · 共用电子对 · 化合价的由来', 22, 52, 12, '#a99bd8', 'left', 0.85);
-
-    // 底部结论条
-    if (at.takeaway) {
+    if (boxH > 0) {
       ctx.save();
       ctx.globalAlpha = 0.92;
       ctx.font = '600 14px "Microsoft YaHei", "PingFang SC", sans-serif';
-      var wrap = wrapText(at.takeaway, viewW - 80);
-      var bh = 26 + wrap.length * 20;
-      roundRectPath(28, viewH - bh - 30, viewW - 56, bh, 12);
+      var boxTop = viewH - PHASE_BAR_ZONE - 2 - boxH;
+      roundRectPath(28, boxTop, viewW - 56, boxH, 12);
       ctx.fillStyle = 'rgba(10,18,32,0.82)';
       ctx.fill();
       ctx.strokeStyle = 'rgba(255,224,130,0.4)';
@@ -2385,30 +2484,37 @@
       ctx.textAlign = 'left';
       ctx.textBaseline = 'top';
       for (var i = 0; i < wrap.length; i++) {
-        ctx.fillText(wrap[i], 48, viewH - bh - 16 + i * 20);
+        ctx.fillText(wrap[i], 48, boxTop + 14 + i * 20);
       }
       ctx.restore();
       ctx.globalAlpha = 1;
     }
+
+    // 标注（限时显示：淡入后自动淡出，避免叠字）→ 入队，随⑤置顶
+    (at.labels || []).forEach(function (lb) {
+      var alpha = windowT(t, lb.at - 0.01, lb.at + 0.05) *
+        (1 - windowT(t, lb.at + 0.18, lb.at + 0.28));
+      if (alpha <= 0.01) return;
+      var x = mapX(lb.pos[0]);
+      var y = mapY(lb.pos[1]);
+      if (lb.anchor) {
+        drawLeaderLine(x, y, mapX(lb.anchor[0]), mapY(lb.anchor[1]), '#ffd54f', alpha * 0.7);
+      }
+      drawPill(x, y, lb.text, '#ffe082', alpha);
+    });
+
+    // ⑤ 键标签与浮动解说胶囊永远在最顶层
+    flushPills();
   }
 
-  function drawAtomWithShells(atom, p, t, time) {
+  /** ④ 电子层轨道（虚线圈，画在原子球之上） */
+  function drawShellOrbits(atom, p) {
+    if (atom.catalyst) return;
     var st = atomStyle(atom.el);
     var shells = atom.shells || [1];
     var x = p[0], y = p[1];
-
-    // 催化剂：画普通球 + 光环（已在外部画），不画电子层
-    if (atom.catalyst) {
-      drawAtom(x, y, atom.el, 1, 1, atom.label);
-      drawPill(x, y - 52, '催化剂 MnO₂', '#b39ddb', 0.9);
-      return;
-    }
-
-    // 电子层轨道
-    var maxR = 0;
     for (var s = 0; s < shells.length; s++) {
       var rr = st.r + 22 + s * 26;
-      maxR = rr;
       ctx.save();
       ctx.globalAlpha = 0.30;
       ctx.strokeStyle = 'rgba(180,210,255,0.8)';
@@ -2420,13 +2526,19 @@
       ctx.setLineDash([]);
       ctx.restore();
     }
+  }
 
-    // 原子核（带符号）
-    drawAtom(x, y, atom.el, 1, 1);
+  /** ④ 电子点（价电子高亮旋转 + 内层电子）；离子电荷徽标入队到⑤ */
+  function drawShellElectrons(atom, p, t, time) {
+    if (atom.catalyst) return;
+    var st = atomStyle(atom.el);
+    var shells = atom.shells || [1];
+    var x = p[0], y = p[1];
+    var maxR = st.r + 22 + (shells.length - 1) * 26;
 
     // 价电子（最外层）高亮旋转
     var outerCount = shells[shells.length - 1];
-    var outerR = st.r + 22 + (shells.length - 1) * 26;
+    var outerR = maxR;
     var spin = time * (0.6 + 0.35 * windowT(t, 0.25, 0.5));
     for (var i = 0; i < outerCount; i++) {
       var ang = spin + (i / outerCount) * Math.PI * 2;
@@ -2478,6 +2590,7 @@
     var cartridge = currentCartridge();
     if (!cartridge || !ctx) return;
 
+    pillQueue.length = 0;
     ctx.clearRect(0, 0, viewW, viewH);
 
     if (state.layer === 'L1') {

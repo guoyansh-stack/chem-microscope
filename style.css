@@ -352,7 +352,9 @@ body {
 
 #viewport {
   width: 100%;
-  height: clamp(380px, 52vh, 560px);
+  /* S5：画布内让出「顶部标题净空区 + 底部解说框净空区」后，
+     适当加高画布，保证中间粒子纯净绘制带有足够呼吸空间 */
+  height: clamp(460px, 60vh, 680px);
   display: block;
   border-radius: 14px;
   background: #080e1a;
