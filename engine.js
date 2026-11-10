@@ -1,9 +1,19 @@
 /* =============================================================================
- * app.js — 宏微观三层穿透显微镜 · 渲染引擎
+ * engine.js — 宏微观三层穿透显微镜 · 纯渲染与交互引擎（S2 模块化版）
  * -----------------------------------------------------------------------------
- * 职责：读取 reactions.js 里的「卡带数据」，按当前缩放层（L1/L2/L3）
- *       与时间轴进度 t(0~1) 把画面画出来，并同步「人话解说卡片」。
- * 引擎不认识任何具体化学内容——一切内容都来自卡带。
+ * 职责：读取标准化「反应卡带数据」（data/*.js 通过 window.CHEM_CARTRIDGES 挂载），
+ *       按当前视界（L1/L2/L3）与时间轴进度 t(0~1) 绘制 2D 动画，
+ *       处理时间轴拖拽、播放、视界切换、左侧目录栏切换，并同步「人话解说卡片」。
+ *
+ * 引擎不包含任何具体化学反应数据（原子坐标 / 化学键 / 解说词），
+ * 一切内容都来自卡带。引擎只自带：
+ *   1) 元素视觉字典 ATOM_STYLE（固定配色）
+ *   2) L1 宏观场景视觉库 MACRO_SCENES（实验台通用仪器画法，由卡带 macro.scene 选用）
+ *   3) 卡带 Schema 校验（CHEM_SCHEMA / validateChemCartridge）
+ *
+ * 加载顺序（双击 index.html 即可运行，禁用 ES Module）：
+ *   data/ch1_water.js → data/ch2_oxygen_carbon.js → engine.js
+ *   各卡带文件执行：window.CHEM_CARTRIDGES = window.CHEM_CARTRIDGES || [] 再 push。
  * ========================================================================== */
 (function () {
   'use strict';
@@ -33,13 +43,18 @@
   }
 
   /* ====================================================================== */
-  /* 1. 原子视觉字典（引擎级默认外观，卡带只说元素符号）                     */
+  /* 1. 原子视觉字典（引擎级固定配色，卡带只说元素符号）                     */
   /* ====================================================================== */
 
   var ATOM_STYLE = {
-    H: { color: '#7fd4ff', glow: '#b7e9ff', r: 15, label: 'H' },
-    O: { color: '#ff6b6b', glow: '#ffb3b3', r: 23, label: 'O' },
-    e: { color: '#ffd54f', glow: '#fff3b0', r: 5, label: 'e' }
+    H:  { color: '#7fd4ff', glow: '#b7e9ff', r: 15, label: 'H' },   // 氢 · 淡蓝
+    O:  { color: '#ff6b6b', glow: '#ffb3b3', r: 23, label: 'O' },   // 氧 · 红
+    C:  { color: '#4a5568', glow: '#a0aec0', r: 21, label: 'C' },   // 碳 · 灰黑（木炭）
+    Mg: { color: '#cfd8dc', glow: '#ffffff', r: 26, label: 'Mg' },  // 镁 · 银白
+    Mn: { color: '#7e57c2', glow: '#b39ddb', r: 24, label: 'Mn' },  // 锰 · 紫（二氧化锰）
+    Ca: { color: '#8d6e63', glow: '#bcaaa4', r: 25, label: 'Ca' },  // 钙 · 棕（石灰石）
+    Cl: { color: '#26a69a', glow: '#80cbc4', r: 21, label: 'Cl' },  // 氯 · 青绿
+    e:  { color: '#ffd54f', glow: '#fff3b0', r: 5, label: 'e' }     // 电子 · 金
   };
 
   function atomStyle(el) {
@@ -61,11 +76,77 @@
   };
 
   function currentCartridge() {
-    var list = window.ReactionCartridges || [];
+    var list = window.CHEM_CARTRIDGES || [];
     for (var i = 0; i < list.length; i++) {
       if (list[i].id === state.cartridgeId) return list[i];
     }
     return list[0];
+  }
+
+  /* ====================================================================== */
+  /* 2.5 卡带 Schema（标准化对接口文档 + 校验器）                           */
+  /* ====================================================================== */
+
+  var CHEM_SCHEMA = {
+    version: '1.1',
+    name: 'Reaction Cartridge Schema',
+    description:
+      '一张卡带 = 一个完整化学反应的可视化剧本。引擎只认这个结构，不认具体化学内容。',
+    topLevelFields: [
+      'id', 'name', 'shortName', 'icon', 'equation', 'type', 'typeDesc',
+      'summary', 'legend', 'macro', 'molecular', 'atomic', 'narration'
+    ],
+    optionalFields: ['badge', 'chapter'],
+    timing: {
+      t: '0~1，对应时间轴 0%~100%',
+      phases: [
+        { range: '0.00~0.25', label: '反应前稳态' },
+        { range: '0.25~0.50', label: '激发与化学键断裂 / 活化能垒' },
+        { range: '0.50~0.75', label: '原子重组与电子转移' },
+        { range: '0.75~1.00', label: '生成物新稳态' }
+      ]
+    },
+    chapter: '{ id, name, order } 目录栏章节分组',
+    badge: "类型徽章配色：'syn' 化合 | 'dec' 分解 | 'dbl' 复分解 | 'mix' 其他",
+    atomFields: {
+      id: '字符串，全卡带唯一',
+      el: '元素符号，如 H / O / C / Mg（决定颜色与半径）',
+      start: '[x, y] 归一化起点',
+      mid: '[x, y] 归一化碰撞/过渡点',
+      end: '[x, y] 归一化终点',
+      jitter: '热运动幅度系数，轻原子（H）应更大',
+      shells: '仅 L3 需要：电子层排布，如 [2, 6]',
+      label: '可选：球内文字覆盖（如催化剂 MnO₂）',
+      ion: '可选 L3：{ label: "Mg²⁺", from: 0.62 } 生成离子后显示电荷',
+      catalyst: '可选：true 则画催化剂光环与徽标'
+    },
+    bondFields: {
+      a: '相连原子 id',
+      b: '相连原子 id',
+      order: '键级：1=单键，2=双键（视觉上画两道）',
+      breakAt: '[t0, t1] 断裂窗口（旧键拉伸→消失）',
+      formAt: '[t0, t1] 形成窗口（新键从远处聚拢→稳定）',
+      pairs: '仅 L3 需要：共用电子对数量',
+      ionic: '可选 L3：true 则画虚线静电引力（离子键），不画共用电子对'
+    }
+  };
+
+  function validateCartridge(c) {
+    var errors = [];
+    if (!c || typeof c !== 'object') {
+      return { ok: false, errors: ['卡带不是对象'] };
+    }
+    CHEM_SCHEMA.topLevelFields.forEach(function (f) {
+      if (!(f in c)) errors.push('缺少字段: ' + f);
+    });
+    if (c.molecular && c.molecular.atoms) {
+      c.molecular.atoms.forEach(function (a) {
+        ['id', 'el', 'start', 'mid', 'end'].forEach(function (f) {
+          if (!(f in a)) errors.push('molecular.atom ' + (a.id || '?') + ' 缺少 ' + f);
+        });
+      });
+    }
+    return { ok: errors.length === 0, errors: errors };
   }
 
   /* ====================================================================== */
@@ -134,10 +215,12 @@
     ctx.fill();
 
     ctx.fillStyle = 'rgba(12,20,36,0.85)';
-    ctx.font = 'bold ' + Math.round(r * 0.85) + 'px "Microsoft YaHei", "PingFang SC", sans-serif';
+    var txt = label || st.label;
+    var fontPx = r * (String(txt).length > 2 ? 0.58 : 0.85);
+    ctx.font = 'bold ' + Math.round(fontPx) + 'px "Microsoft YaHei", "PingFang SC", sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(label || st.label, x, y + 1);
+    ctx.fillText(txt, x, y + 1);
     ctx.globalAlpha = 1;
   }
 
@@ -178,6 +261,7 @@
     var glow = opts.glow || '#9ae6ff';
     ctx.save();
     ctx.lineCap = 'round';
+    if (opts.dashed) ctx.setLineDash([9, 7]);
     ctx.globalAlpha = alpha * 0.35;
     ctx.strokeStyle = glow;
     ctx.lineWidth = 10;
@@ -188,14 +272,15 @@
 
     ctx.globalAlpha = alpha;
     ctx.strokeStyle = opts.color || '#d7f3ff';
-    ctx.lineWidth = order === 2 ? 5 : 7;
-    if (order === 2) {
+    ctx.lineWidth = opts.dashed ? 4 : (order === 2 ? 5 : 7);
+    if (order === 2 && !opts.dashed) {
       var ox = -uy * 5, oy = ux * 5;
       ctx.beginPath(); ctx.moveTo(ax + ox, ay + oy); ctx.lineTo(ex + ox, ey + oy); ctx.stroke();
       ctx.beginPath(); ctx.moveTo(ax - ox, ay - oy); ctx.lineTo(ex - ox, ey - oy); ctx.stroke();
     } else {
       ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(ex, ey); ctx.stroke();
     }
+    ctx.setLineDash([]);
     ctx.restore();
   }
 
@@ -275,8 +360,11 @@
   }
 
   /* ====================================================================== */
-  /* 4. L1 宏观实验台                                                       */
+  /* 4. L1 宏观实验台 · 场景视觉库（MACRO_SCENES）                           */
+  /*     卡带用 macro.scene 指定场景名；通用仪器画法复用，化学内容在数据里  */
   /* ====================================================================== */
+
+  var MACRO_SCENES = {};
 
   function renderMacro(cartridge, t, time) {
     var m = cartridge.macro;
@@ -288,11 +376,8 @@
     ctx.fillStyle = bg;
     ctx.fillRect(0, 0, viewW, viewH);
 
-    if (m.scene === 'electrolysis') {
-      drawMacroElectrolysis(m, t, time);
-    } else {
-      drawMacroCombustion(m, t, time);
-    }
+    var sceneFn = MACRO_SCENES[m.scene] || MACRO_SCENES.combustion;
+    sceneFn(m, t, time);
 
     // 现象清单（左下角，逐条亮起）
     var ph = m.phenomena || [];
@@ -687,6 +772,555 @@
     ctx.globalAlpha = 1;
   }
 
+  /* ---------------- L1 通用仪器画法 ---------------- */
+
+  function drawBench(baseY) {
+    var bench = ctx.createLinearGradient(0, baseY, 0, viewH);
+    bench.addColorStop(0, '#2a3a55');
+    bench.addColorStop(1, '#1b2940');
+    ctx.fillStyle = bench;
+    ctx.fillRect(0, baseY, viewW, viewH - baseY);
+    ctx.fillStyle = 'rgba(255,255,255,0.06)';
+    ctx.fillRect(0, baseY, viewW, 3);
+  }
+
+  function drawBeaker(x, y, w, h, liquidRatio, liquidColor) {
+    ctx.save();
+    roundRectPath(x, y, w, h, 10);
+    var glass = ctx.createLinearGradient(x, y, x + w, y + h);
+    glass.addColorStop(0, 'rgba(150,190,230,0.16)');
+    glass.addColorStop(1, 'rgba(150,190,230,0.07)');
+    ctx.fillStyle = glass;
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(180,215,255,0.55)';
+    ctx.lineWidth = 2.5;
+    ctx.stroke();
+    var ratio = liquidRatio == null ? 0.62 : liquidRatio;
+    if (ratio > 0.02) {
+      var lh = (h - 16) * ratio;
+      ctx.fillStyle = liquidColor || 'rgba(80,160,220,0.32)';
+      roundRectPath(x + 7, y + h - 8 - lh, w - 14, lh, 7);
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(180,225,255,0.4)';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(x + 7, y + h - 8 - lh);
+      ctx.lineTo(x + w - 7, y + h - 8 - lh);
+      ctx.stroke();
+    }
+    ctx.restore();
+    ctx.globalAlpha = 1;
+  }
+
+  /** 锥形瓶（梯形轮廓） */
+  function drawConicalFlask(x, y, w, h, liquidRatio, liquidColor) {
+    // x,y = 瓶口中心坐标；h = 瓶身主体高度
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(x - w * 0.16, y);
+    ctx.lineTo(x - w * 0.16, y + h * 0.16);
+    ctx.lineTo(x - w * 0.5, y + h);
+    ctx.lineTo(x + w * 0.5, y + h);
+    ctx.lineTo(x + w * 0.16, y + h * 0.16);
+    ctx.lineTo(x + w * 0.16, y);
+    ctx.closePath();
+    var glass = ctx.createLinearGradient(x - w / 2, y, x + w / 2, y + h);
+    glass.addColorStop(0, 'rgba(150,190,230,0.17)');
+    glass.addColorStop(1, 'rgba(150,190,230,0.07)');
+    ctx.fillStyle = glass;
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(180,215,255,0.55)';
+    ctx.lineWidth = 2.8;
+    ctx.stroke();
+    var ratio = liquidRatio == null ? 0.55 : liquidRatio;
+    if (ratio > 0.02) {
+      var lh = (h - h * 0.2) * ratio;
+      ctx.beginPath();
+      var yTop = y + h - lh;
+      var spread = 0.5 - 0.34 * (lh / h);
+      ctx.moveTo(x - w * spread, yTop);
+      ctx.lineTo(x - w * 0.5, y + h - 4);
+      ctx.lineTo(x + w * 0.5, y + h - 4);
+      ctx.lineTo(x + w * spread, yTop);
+      ctx.closePath();
+      ctx.fillStyle = liquidColor || 'rgba(80,160,220,0.34)';
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(180,225,255,0.4)';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(x - w * spread, yTop);
+      ctx.lineTo(x + w * spread, yTop);
+      ctx.stroke();
+    }
+    // 瓶口翻边
+    ctx.fillStyle = 'rgba(190,220,255,0.35)';
+    roundRectPath(x - w * 0.22, y - 8, w * 0.44, 10, 5);
+    ctx.fill();
+    ctx.restore();
+    ctx.globalAlpha = 1;
+  }
+
+  /** 耀眼白光 / 星芒爆发 */
+  function drawStarburst(x, y, radius, alpha, time, color) {
+    if (alpha <= 0.01) return;
+    ctx.save();
+    var col = color || '#fffbe6';
+    var g = ctx.createRadialGradient(x, y, 2, x, y, radius);
+    g.addColorStop(0, '#ffffff');
+    g.addColorStop(0.18, col);
+    g.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.globalAlpha = alpha * 0.9;
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(x, y, radius, 0, Math.PI * 2);
+    ctx.fill();
+    // 放射线
+    var rays = 12;
+    ctx.lineCap = 'round';
+    for (var i = 0; i < rays; i++) {
+      var ang = (i / rays) * Math.PI * 2 + time * 0.25;
+      var r0 = radius * 0.16;
+      var r1 = radius * (0.72 + 0.28 * Math.abs(Math.sin(time * 2.2 + i * 1.7)));
+      ctx.globalAlpha = alpha * 0.75;
+      ctx.strokeStyle = col;
+      ctx.lineWidth = 2.6;
+      ctx.beginPath();
+      ctx.moveTo(x + Math.cos(ang) * r0, y + Math.sin(ang) * r0);
+      ctx.lineTo(x + Math.cos(ang) * r1, y + Math.sin(ang) * r1);
+      ctx.stroke();
+    }
+    ctx.restore();
+    ctx.globalAlpha = 1;
+  }
+
+  /** 坩埚钳（两根细臂 + 夹头），夹点在 (x, y) */
+  function drawTongs(x, y, angle, length) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(angle);
+    ctx.strokeStyle = '#8fa3c8';
+    ctx.lineWidth = 5;
+    ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(0, -4); ctx.lineTo(-length, -16); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0, 4); ctx.lineTo(-length, 16); ctx.stroke();
+    // 夹头
+    ctx.fillStyle = '#b7c6de';
+    roundRectPath(-4, -9, 18, 18, 5);
+    ctx.fill();
+    ctx.restore();
+    ctx.globalAlpha = 1;
+  }
+
+  /** 红热木炭块 */
+  function drawCharcoal(x, y, glowK, time) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.fillStyle = '#20262e';
+    roundRectPath(-16, -11, 32, 22, 8);
+    ctx.fill();
+    ctx.strokeStyle = '#3a4656';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    if (glowK > 0.01) {
+      var g = ctx.createRadialGradient(0, 0, 2, 0, 0, 34);
+      g.addColorStop(0, '#fff7d9');
+      g.addColorStop(0.3, '#ffb74d');
+      g.addColorStop(1, 'rgba(255,140,60,0)');
+      ctx.globalAlpha = 0.35 + glowK * 0.65;
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.arc(0, 0, 34 + Math.sin(time * 5) * 3, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#ffca7a';
+      roundRectPath(-10, -6, 20, 12, 5);
+      ctx.fill();
+    }
+    ctx.restore();
+    ctx.globalAlpha = 1;
+  }
+
+  /** 镁条（银白色亮条） */
+  function drawMgRibbon(x, y, angle, length, glowK, time) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(angle);
+    var g = ctx.createLinearGradient(0, -5, 0, 5);
+    g.addColorStop(0, '#f4f7fa');
+    g.addColorStop(0.5, '#cfd8dc');
+    g.addColorStop(1, '#9aa7b0');
+    ctx.fillStyle = g;
+    roundRectPath(-length / 2, -5, length, 10, 4);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,0.55)';
+    ctx.lineWidth = 1.2;
+    ctx.stroke();
+    if (glowK > 0.01) {
+      var tipG = ctx.createRadialGradient(length / 2, 0, 1, length / 2, 0, 26);
+      tipG.addColorStop(0, '#ffffff');
+      tipG.addColorStop(0.4, '#ffe9a8');
+      tipG.addColorStop(1, 'rgba(255,220,150,0)');
+      ctx.globalAlpha = glowK;
+      ctx.fillStyle = tipG;
+      ctx.beginPath();
+      ctx.arc(length / 2, 0, 26, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+    ctx.globalAlpha = 1;
+  }
+
+  /** 粉末下落 / 堆积 */
+  function drawPowderFall(x, yTop, spread, count, k, time, color) {
+    if (k <= 0.01) return;
+    ctx.save();
+    for (var i = 0; i < count; i++) {
+      var phase = (k * 1.3 + seeded(i * 3.3) * 0.6) % 1;
+      var px = x + (seeded(i * 5.1) - 0.5) * spread;
+      var py = yTop + phase * 130;
+      var alpha = (1 - phase * 0.55) * Math.min(1, k * 1.5);
+      ctx.globalAlpha = alpha * 0.9;
+      ctx.fillStyle = color || '#3a3f46';
+      var r = 2.2 + seeded(i * 7.7) * 2.6;
+      ctx.beginPath();
+      ctx.arc(px, py, r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+    ctx.globalAlpha = 1;
+  }
+
+  /** 带火星 / 燃烧的木条 */
+  function drawSplint(x, y, angle, litK, time) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(angle);
+    var g = ctx.createLinearGradient(0, -4, 0, 4);
+    g.addColorStop(0, '#c8a165');
+    g.addColorStop(1, '#8a6b3f');
+    ctx.fillStyle = g;
+    roundRectPath(-6, -4, 120, 8, 4);
+    ctx.fill();
+    if (litK > 0.01) {
+      var eg = ctx.createRadialGradient(0, 0, 1, 0, 0, 30);
+      eg.addColorStop(0, '#fff3c4');
+      eg.addColorStop(0.35, '#ff8a65');
+      eg.addColorStop(1, 'rgba(255,110,60,0)');
+      ctx.globalAlpha = 0.35 + litK * 0.65;
+      ctx.fillStyle = eg;
+      ctx.beginPath();
+      ctx.arc(0, 0, 30 + Math.sin(time * 6) * 4, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#ffd54f';
+      ctx.beginPath();
+      ctx.arc(0, 0, 5 + litK * 3, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+    ctx.globalAlpha = 1;
+  }
+
+  /** 澄清石灰水（cloudiness 0=澄清 → 1=乳白浑浊） */
+  function drawLimewater(x, y, w, h, cloudiness) {
+    drawBeaker(x, y, w, h, 0.7, 'rgba(120,190,235,0.16)');
+    if (cloudiness > 0.02) {
+      ctx.save();
+      ctx.globalAlpha = Math.min(0.85, cloudiness);
+      ctx.fillStyle = 'rgba(238,240,235,0.92)';
+      roundRectPath(x + 7, y + h * 0.34, w - 14, h * 0.6, 7);
+      ctx.fill();
+      // 乳白色絮状感
+      for (var i = 0; i < 10; i++) {
+        ctx.globalAlpha = cloudiness * 0.35;
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.arc(x + 14 + seeded(i * 2.7) * (w - 28),
+          y + h * 0.38 + seeded(i * 4.3) * h * 0.5,
+          3 + seeded(i * 6.1) * 5, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
+    }
+    drawText('澄清石灰水', x + w / 2, y + h + 18, 12, '#9fd8ff', 'center', 0.9);
+    if (cloudiness > 0.55) {
+      drawText('变浑浊（CO₂）', x + w / 2, y + h + 38, 12, '#ffd54f', 'center', 0.95);
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  /** 导气管（圆角折线） */
+  function drawDeliveryTube(x1, y1, x2, y2) {
+    ctx.save();
+    ctx.strokeStyle = 'rgba(190,220,255,0.6)';
+    ctx.lineWidth = 7;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(x1, y1);
+    ctx.lineTo(x1, (y1 + y2) / 2 - 26);
+    ctx.quadraticCurveTo(x1, y2 - 26, x1 + 26, y2 - 26);
+    ctx.lineTo(x2 - 18, y2 - 26);
+    ctx.quadraticCurveTo(x2, y2 - 26, x2, y2);
+    ctx.stroke();
+    ctx.strokeStyle = 'rgba(220,240,255,0.35)';
+    ctx.lineWidth = 2.5;
+    ctx.stroke();
+    ctx.restore();
+    ctx.globalAlpha = 1;
+  }
+
+  /** 大理石碎块 */
+  function drawChip(x, y, r, seed) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(seeded(seed) * Math.PI);
+    var g = ctx.createLinearGradient(-r, -r, r, r);
+    g.addColorStop(0, '#f2efe8');
+    g.addColorStop(1, '#c9c2b4');
+    ctx.fillStyle = g;
+    roundRectPath(-r, -r * 0.72, r * 2, r * 1.44, 5);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(120,110,95,0.5)';
+    ctx.lineWidth = 1.2;
+    ctx.stroke();
+    ctx.restore();
+    ctx.globalAlpha = 1;
+  }
+
+  /* ---------------- L1 新增场景：碳燃烧 / 镁燃烧 / 双氧水 / 大理石盐酸 ---------------- */
+
+  /** 碳在氧气中充分燃烧：木炭白光 + 澄清石灰水变浑浊 */
+  function drawMacroCarbonBurn(m, t, time) {
+    var baseY = viewH * 0.80;
+    drawBench(baseY);
+
+    var cx = viewW * 0.38;
+    var jarW = 190, jarH = 240;
+    var jarX = cx - jarW / 2, jarY = baseY - jarH - 16;
+
+    // 集气瓶
+    roundRectPath(jarX, jarY, jarW, jarH, 24);
+    var glass = ctx.createLinearGradient(jarX, jarY, jarX + jarW, jarY + jarH);
+    glass.addColorStop(0, 'rgba(150,190,230,0.18)');
+    glass.addColorStop(0.5, 'rgba(120,170,220,0.10)');
+    glass.addColorStop(1, 'rgba(150,190,230,0.20)');
+    ctx.fillStyle = glass;
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(180,215,255,0.55)';
+    ctx.lineWidth = 3;
+    ctx.stroke();
+    // 氧气（淡蓝）
+    ctx.globalAlpha = 0.12 + 0.06 * (1 - windowT(t, 0.3, 0.8));
+    ctx.fillStyle = '#9fd8ff';
+    roundRectPath(jarX + 12, jarY + 14, jarW - 24, jarH - 28, 18);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+
+    // 坩埚钳 + 木炭（钳子从右上伸入瓶中央）
+    var coalX = cx, coalY = jarY + jarH * 0.48;
+    drawTongs(coalX + 20, coalY - 6, -0.5, 120);
+    var glowK = windowT(t, 0.22, 0.38) * (1 - windowT(t, 0.78, 0.95));
+    drawCharcoal(coalX, coalY, glowK, time);
+
+    // 耀眼白光（碳在氧气中：发出白光）
+    var burst = windowT(t, 0.28, 0.38) * (1 - windowT(t, 0.58, 0.74));
+    if (burst > 0.01) {
+      drawStarburst(coalX, coalY, 150 + 26 * Math.sin(time * 4), burst * 0.95, time, '#fff6da');
+    }
+
+    // 热浪
+    var heat = windowT(t, 0.35, 0.55) * (1 - windowT(t, 0.85, 1.0));
+    if (heat > 0.01) {
+      ctx.save();
+      ctx.globalAlpha = heat * 0.5;
+      ctx.strokeStyle = '#ffd9a0';
+      ctx.lineWidth = 2;
+      for (var k = 0; k < 3; k++) {
+        ctx.beginPath();
+        for (var px = 0; px <= 30; px++) {
+          var xx = cx - 110 + px * 7;
+          var yy = jarY - 22 - k * 15 + Math.sin(px * 0.55 + time * 3 + k) * 5;
+          if (px === 0) ctx.moveTo(xx, yy); else ctx.lineTo(xx, yy);
+        }
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    // 温度计
+    drawThermometer(viewW * 0.66, viewH * 0.22, viewH * 0.5, windowT(t, 0.25, 0.85));
+
+    // 澄清石灰水（检验 CO₂）
+    var cloud = windowT(t, 0.72, 0.94);
+    drawLimewater(viewW * 0.82, baseY - 150, 110, 120, cloud);
+
+    drawPill(cx, jarY - 32, '条件：' + (m.conditions || '点燃'), '#ffb74d', 0.95);
+    drawPill(cx, baseY + 26, m.vesselLabel || '木炭（碳）在氧气中', '#90caf9', 0.9);
+  }
+
+  /** 镁条在空气中燃烧：耀眼白光 + 白色固体 */
+  function drawMacroMgBurn(m, t, time) {
+    var baseY = viewH * 0.80;
+    drawBench(baseY);
+
+    // 酒精灯
+    var lampX = viewW * 0.30, lampY = baseY;
+    ctx.fillStyle = '#2f4a63';
+    roundRectPath(lampX - 34, lampY - 74, 68, 74, 12);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(180,215,255,0.5)';
+    ctx.lineWidth = 2.5;
+    ctx.stroke();
+    ctx.fillStyle = '#42627f';
+    roundRectPath(lampX - 12, lampY - 96, 24, 26, 7);
+    ctx.fill();
+    // 灯焰
+    var flameK = windowT(t, 0.10, 0.22) * (1 - windowT(t, 0.88, 1.0)) + 0.25;
+    drawFlame(lampX, lampY - 112, 0.72 + 0.06 * Math.sin(time * 6), Math.min(1, flameK));
+
+    // 镁条 + 坩埚钳（伸向灯焰上方）
+    var ribbonX = lampX + 30, ribbonY = lampY - 138;
+    drawTongs(ribbonX + 128, ribbonY - 26, -0.32, 120);
+    var glowK = windowT(t, 0.18, 0.32) * (1 - windowT(t, 0.72, 0.9));
+    drawMgRibbon(ribbonX, ribbonY, -0.18, 110, glowK, time);
+
+    // 耀眼白光（比碳更刺眼的星芒）
+    var burst = windowT(t, 0.28, 0.38) * (1 - windowT(t, 0.58, 0.72));
+    if (burst > 0.01) {
+      drawStarburst(ribbonX + 46, ribbonY - 10, 190 + 30 * Math.sin(time * 5), burst, time, '#ffffff');
+      drawText('耀眼白光 · 不能直视！', ribbonX + 46, ribbonY - 128, 14, '#fff3c4', 'center', burst);
+    }
+
+    // 白色固体粉末落到表面皿
+    var dishX = viewW * 0.62, dishY = baseY - 16;
+    ctx.save();
+    ctx.globalAlpha = 0.8;
+    ctx.fillStyle = 'rgba(190,220,250,0.22)';
+    ctx.beginPath();
+    ctx.ellipse(dishX, dishY, 86, 18, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(185,215,255,0.55)';
+    ctx.lineWidth = 2.5;
+    ctx.stroke();
+    ctx.restore();
+    var powderK = windowT(t, 0.52, 0.86);
+    drawPowderFall(ribbonX + 46, ribbonY + 8, 60, 16, powderK, time, '#f5f5f0');
+    if (powderK > 0.05) {
+      ctx.save();
+      ctx.globalAlpha = Math.min(1, powderK) * 0.95;
+      ctx.fillStyle = '#f2f2ec';
+      ctx.beginPath();
+      ctx.ellipse(dishX, dishY - 6, 46 * powderK, 10 * powderK + 3, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    // 温度计
+    drawThermometer(viewW * 0.86, viewH * 0.24, viewH * 0.48, windowT(t, 0.22, 0.82));
+
+    drawPill(lampX, baseY + 26, m.vesselLabel || '银白色镁条', '#b0bec5', 0.9);
+    drawPill(ribbonX + 46, jarSafeY(ribbonY - 168), '条件：' + (m.conditions || '点燃'), '#ffe082', 0.95);
+    drawPill(dishX, baseY + 26, m.productLabel || '白色固体 MgO', '#e0e0e0', 0.8 + powderK * 0.2);
+  }
+
+  function jarSafeY(y) { return y < 30 ? 34 : y; }
+
+  /** 过氧化氢催化分解：MnO₂ 催化 + 气泡 + 带火星木条复燃 */
+  function drawMacroH2O2(m, t, time) {
+    var baseY = viewH * 0.82;
+    drawBench(baseY);
+
+    var cx = viewW * 0.42, flaskW = 240, flaskH = 210;
+    var flaskTop = baseY - flaskH - 30;
+
+    // 锥形瓶
+    drawConicalFlask(cx, flaskTop, flaskW, flaskH, 0.62, 'rgba(120,190,235,0.30)');
+
+    // 二氧化锰（黑色粉末）落入
+    var powderK = windowT(t, 0.16, 0.30);
+    drawPowderFall(cx, flaskTop - 30, 70, 14, powderK, time, '#2e2e34');
+
+    // 瓶内气泡
+    var bubblePower = windowT(t, 0.26, 0.55);
+    if (bubblePower > 0.01) {
+      drawBubbles(cx - 40, flaskTop + flaskH * 0.34, baseY - 30, bubblePower * 1.8, time, 3);
+      drawBubbles(cx + 36, flaskTop + flaskH * 0.38, baseY - 26, bubblePower * 1.5, time, 5);
+    }
+
+    // 瓶口向上逸出的气体（O₂）
+    var gasK = windowT(t, 0.42, 0.7);
+    if (gasK > 0.02) {
+      ctx.save();
+      ctx.globalAlpha = gasK * 0.32;
+      var gg = ctx.createRadialGradient(cx, flaskTop - 12, 4, cx, flaskTop - 12, 120);
+      gg.addColorStop(0, '#b7e9ff');
+      gg.addColorStop(1, 'rgba(120,190,240,0)');
+      ctx.fillStyle = gg;
+      ctx.beginPath();
+      ctx.arc(cx, flaskTop - 12, 120, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    // 带火星木条（在瓶口复燃）
+    var splintX = cx + 120, splintY = flaskTop - 24;
+    var litK = windowT(t, 0.50, 0.60) * (1 - windowT(t, 0.88, 1.0));
+    drawSplint(splintX, splintY, -0.35, litK, time);
+    if (litK > 0.01) {
+      drawStarburst(splintX + 4, splintY - 8, 70, litK * 0.8, time, '#ffe9a8');
+      drawText('带火星木条复燃（O₂！）', splintX + 10, splintY - 64, 13, '#ffe082', 'center', litK);
+    }
+
+    // 催化剂标注
+    drawPill(cx - 130, flaskTop + flaskH * 0.42, 'MnO₂ 催化剂（只帮忙、不消耗）', '#b39ddb', 0.92);
+
+    drawPill(cx, baseY + 26, m.vesselLabel || '过氧化氢溶液（双氧水）', '#90caf9', 0.9);
+    drawPill(cx, flaskTop - 74, '条件：' + (m.conditions || 'MnO₂ 催化'), '#ffe082', 0.95);
+  }
+
+  /** 大理石与稀盐酸制 CO₂：冒气泡 + 石灰水变浑浊 */
+  function drawMacroMarbleAcid(m, t, time) {
+    var baseY = viewH * 0.82;
+    drawBench(baseY);
+
+    // 左：锥形瓶 + 大理石 + 稀盐酸
+    var cx = viewW * 0.30, flaskW = 230, flaskH = 200;
+    var flaskTop = baseY - flaskH - 26;
+    drawConicalFlask(cx, flaskTop, flaskW, flaskH, 0.55, 'rgba(120,190,235,0.26)');
+
+    // 大理石碎块（白色）
+    var chipK = 1 - windowT(t, 0.30, 0.85) * 0.55;
+    for (var i = 0; i < 5; i++) {
+      var chX = cx - 52 + i * 26 + (seeded(i * 3.7) - 0.5) * 12;
+      var chY = baseY - 22 - seeded(i * 5.1) * 14;
+      drawChip(chX, chY, 13 * (0.65 + chipK * 0.35), i);
+    }
+
+    // 气泡
+    var bubblePower = windowT(t, 0.20, 0.5);
+    if (bubblePower > 0.01) {
+      drawBubbles(cx - 30, flaskTop + flaskH * 0.32, baseY - 44, bubblePower * 1.7, time, 2);
+      drawBubbles(cx + 30, flaskTop + flaskH * 0.36, baseY - 40, bubblePower * 1.4, time, 6);
+    }
+
+    // 导管 → 右侧石灰水
+    var beakerX = viewW * 0.72, beakerY = baseY - 150;
+    drawDeliveryTube(cx + 30, flaskTop + 6, beakerX + 40, beakerY + 34);
+
+    // 石灰水变浑浊
+    var cloud = windowT(t, 0.58, 0.92);
+    drawLimewater(beakerX, beakerY, 130, 140, cloud);
+
+    drawPill(cx, flaskTop - 60, '条件：' + (m.conditions || '常温 · 不加热'), '#ffe082', 0.95);
+    drawPill(cx, baseY + 26, m.vesselLabel || '大理石 + 稀盐酸', '#90caf9', 0.9);
+  }
+
+  // 场景注册表（卡带 macro.scene 选用）
+  MACRO_SCENES.combustion = drawMacroCombustion;
+  MACRO_SCENES.electrolysis = drawMacroElectrolysis;
+  MACRO_SCENES.carbon_burn = drawMacroCarbonBurn;
+  MACRO_SCENES.mg_burn = drawMacroMgBurn;
+  MACRO_SCENES.h2o2 = drawMacroH2O2;
+  MACRO_SCENES.marble_acid = drawMacroMarbleAcid;
+
   /* ====================================================================== */
   /* 5. L2 分子动力学层                                                      */
   /* ====================================================================== */
@@ -711,36 +1345,39 @@
     return [x * viewW, y * viewH];
   }
 
-  /** 计算键在 t 时刻的视觉状态 */
+  /** 计算键在 t 时刻的视觉状态（支持 formAt / breakAt 同时存在：先成后断） */
   function bondState(bond, t) {
     // 返回 {visible, alpha, stretch, breaking, forming}
-    if (bond.breakAt) {
-      var b0 = bond.breakAt[0], b1 = bond.breakAt[1];
-      if (t >= b1) return { visible: false };
-      if (t < b0) return { visible: true, alpha: 1, stretch: 1 };
-      var k = invLerp(b0, b1, t);
-      return {
-        visible: true,
-        alpha: 1 - k * 0.95,
-        stretch: 1 + k * 0.85,
-        breaking: true,
-        breakK: k
-      };
-    }
+    var alpha = 1;
+    var stretch = 1;
+    var breaking = false, forming = false, breakK, formK;
+
     if (bond.formAt) {
       var f0 = bond.formAt[0], f1 = bond.formAt[1];
       if (t <= f0) return { visible: false };
-      if (t >= f1) return { visible: true, alpha: 1, stretch: 1 };
-      var k2 = invLerp(f0, f1, t);
-      return {
-        visible: true,
-        alpha: k2,
-        stretch: 1 + (1 - k2) * 0.75,
-        forming: true,
-        formK: k2
-      };
+      if (t < f1) {
+        formK = invLerp(f0, f1, t);
+        alpha = formK;
+        stretch = 1 + (1 - formK) * 0.75;
+        forming = true;
+      }
     }
-    return { visible: true, alpha: 1, stretch: 1 };
+
+    if (bond.breakAt) {
+      var b0 = bond.breakAt[0], b1 = bond.breakAt[1];
+      if (t >= b1) return { visible: false };
+      if (t > b0) {
+        breakK = invLerp(b0, b1, t);
+        alpha = Math.min(alpha, 1 - breakK * 0.95);
+        stretch = Math.max(stretch, 1 + breakK * 0.85);
+        breaking = true;
+      }
+    }
+
+    return {
+      visible: true, alpha: alpha, stretch: stretch,
+      breaking: breaking, forming: forming, breakK: breakK, formK: formK
+    };
   }
 
   function renderMolecular(cartridge, t, time) {
@@ -784,7 +1421,9 @@
     // 原子
     mol.atoms.forEach(function (a) {
       var p = pos[a.id];
-      drawAtom(p[0], p[1], a.el, 1, 1);
+      if (a.catalyst) drawCatalystRing(p[0], p[1], time, 1);
+      drawAtom(p[0], p[1], a.el, 1, 1, a.label);
+      if (a.catalyst) drawPill(p[0], p[1] - 52, '催化剂', '#b39ddb', 0.9);
     });
 
     // 阶段字幕
@@ -793,6 +1432,21 @@
     // 左上角缩放标识
     drawText('L2 · 分子动力学层', 22, 28, 15, '#7fd4ff', 'left', 0.9);
     drawText('看得见：分子热运动 · 有效碰撞 · 旧键断裂 · 新键形成', 22, 52, 12, '#8fa3c8', 'left', 0.85);
+  }
+
+  /** 催化剂光环（脉动虚线圈） */
+  function drawCatalystRing(x, y, time, alpha) {
+    ctx.save();
+    ctx.globalAlpha = (alpha == null ? 1 : alpha) * 0.75;
+    ctx.strokeStyle = '#b39ddb';
+    ctx.lineWidth = 2.2;
+    ctx.setLineDash([6, 6]);
+    ctx.beginPath();
+    ctx.arc(x, y, 46 + Math.sin(time * 2.6) * 3.5, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.restore();
+    ctx.globalAlpha = 1;
   }
 
   function drawMicroscopeFrame() {
@@ -868,6 +1522,25 @@
       if (!st.visible) return;
       var pa = pos[b.a], pb = pos[b.b];
       if (!pa || !pb) return;
+
+      if (b.ionic) {
+        // 离子键：虚线静电引力，无共用电子对
+        drawBond(pa[0], pa[1], pb[0], pb[1], 1, {
+          alpha: st.alpha * 0.95,
+          stretch: st.stretch,
+          glow: '#ffb74d',
+          color: '#ffd9a0',
+          dashed: true
+        });
+        if (st.breaking && st.breakK != null) {
+          drawBreakSpark((pa[0] + pb[0]) / 2, (pa[1] + pb[1]) / 2, st.breakK, time);
+        }
+        if (st.alpha > 0.55 && !st.breaking) {
+          drawPill((pa[0] + pb[0]) / 2, (pa[1] + pb[1]) / 2 - 36, '静电引力（离子键）', '#ffb74d', 0.9);
+        }
+        return;
+      }
+
       drawBond(pa[0], pa[1], pb[0], pb[1], b.order, {
         alpha: st.alpha * 0.9,
         stretch: st.stretch,
@@ -912,7 +1585,9 @@
 
     // 原子核 + 电子层
     at.atoms.forEach(function (a) {
-      drawAtomWithShells(a, pos[a.id], t, time);
+      var p = pos[a.id];
+      if (a.catalyst) drawCatalystRing(p[0], p[1], time, 1);
+      drawAtomWithShells(a, p, t, time);
     });
 
     // 标注（限时显示：淡入后自动淡出，避免叠字）
@@ -960,6 +1635,13 @@
     var shells = atom.shells || [1];
     var x = p[0], y = p[1];
 
+    // 催化剂：画普通球 + 光环（已在外部画），不画电子层
+    if (atom.catalyst) {
+      drawAtom(x, y, atom.el, 1, 1, atom.label);
+      drawPill(x, y - 52, '催化剂 MnO₂', '#b39ddb', 0.9);
+      return;
+    }
+
     // 电子层轨道
     var maxR = 0;
     for (var s = 0; s < shells.length; s++) {
@@ -999,6 +1681,13 @@
         var ang2 = time * 0.8 + (j / cnt) * Math.PI * 2 + s2;
         drawElectron(x + Math.cos(ang2) * rr2, y + Math.sin(ang2) * rr2, 3, 0.55);
       }
+    }
+
+    // 离子电荷徽标（如 Mg²⁺ / O²⁻），t 到达 ion.from 后显示
+    if (atom.ion && t >= (atom.ion.from == null ? 0 : atom.ion.from)) {
+      var ionFrom = atom.ion.from == null ? 0 : atom.ion.from;
+      var fade = windowT(t, ionFrom, ionFrom + 0.05);
+      drawPill(x, y + maxR + 24, atom.ion.label, '#ffd54f', fade);
     }
   }
 
@@ -1069,6 +1758,75 @@
 
   function $(id) { return document.getElementById(id); }
 
+  /** 按章节分组构建左侧目录栏 */
+  function buildSidebar() {
+    if (!els.sidebarBody) return;
+    var list = window.CHEM_CARTRIDGES || [];
+    var groups = [];
+    var byId = {};
+    list.forEach(function (c) {
+      var ch = c.chapter || { id: 'misc', name: '其他反应', order: 99 };
+      if (!byId[ch.id]) {
+        byId[ch.id] = { meta: ch, items: [] };
+        groups.push(byId[ch.id]);
+      }
+      byId[ch.id].items.push(c);
+    });
+    groups.sort(function (a, b) { return (a.meta.order || 0) - (b.meta.order || 0); });
+
+    var html = '';
+    groups.forEach(function (g) {
+      html += '<div class="sb-chapter"><div class="sb-ch-name">' + g.meta.name + '</div>';
+      g.items.forEach(function (c) {
+        html += '<button type="button" class="sb-item' + (c.id === state.cartridgeId ? ' active' : '') +
+          '" data-cart="' + c.id + '">' +
+          '<span class="sb-ico">' + (c.icon || '•') + '</span>' +
+          '<span class="sb-txt"><span class="sb-name">' + c.shortName + '</span>' +
+          '<span class="sb-eq">' + c.equation + '</span></span></button>';
+      });
+      html += '</div>';
+    });
+    els.sidebarBody.innerHTML = html;
+
+    if (els.cartCount) els.cartCount.textContent = String(list.length);
+
+    // 事件委托：切换卡带
+    els.sidebarBody.querySelectorAll('[data-cart]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        selectCartridge(btn.getAttribute('data-cart'));
+      });
+    });
+  }
+
+  /** 切换卡带：时间轴归零、全部同步 */
+  function selectCartridge(id) {
+    state.cartridgeId = id;
+    state.t = 0;
+    state.playing = false;
+    if (els.slider) els.slider.value = 0;
+    refreshPlayButton();
+    refreshCartridgeInfo();
+    syncAll();
+    render();
+  }
+
+  /** 折叠 / 展开目录栏 */
+  function toggleSidebar() {
+    if (!els.sidebar) return;
+    var collapsed = els.sidebar.classList.toggle('collapsed');
+    var shell = els.sidebar.parentElement;
+    if (shell) shell.classList.toggle('sb-hidden', collapsed);
+    if (els.sidebarToggle) {
+      els.sidebarToggle.textContent = collapsed ? '»' : '«';
+      els.sidebarToggle.title = collapsed ? '展开目录' : '收起目录';
+    }
+    if (els.sidebarToggleTop) {
+      els.sidebarToggleTop.textContent = collapsed ? '📂 展开目录' : '📂 收起目录';
+    }
+    // 折叠动画后重排画布
+    window.setTimeout(resizeCanvas, 280);
+  }
+
   function bindUI() {
     canvas = $('viewport');
     ctx = canvas.getContext('2d');
@@ -1077,7 +1835,6 @@
     els.playBtn = $('playBtn');
     els.tLabel = $('tLabel');
     els.layerBtns = document.querySelectorAll('[data-layer]');
-    els.cartBtns = document.querySelectorAll('[data-cart]');
     els.narrTitle = $('narrTitle');
     els.narrText = $('narrText');
     els.narrPhase = $('narrPhase');
@@ -1086,6 +1843,18 @@
     els.summaryText = $('summaryText');
     els.legendList = $('legendList');
     els.phaseLabels = document.querySelectorAll('.phase-label');
+    els.sidebar = $('sidebar');
+    els.sidebarBody = $('sidebarBody');
+    els.sidebarToggle = $('sidebarToggle');
+    els.sidebarToggleTop = $('sidebarToggleTop');
+    els.cartCount = $('cartCount');
+    els.curName = $('curName');
+    els.curEq = $('curEq');
+
+    buildSidebar();
+
+    if (els.sidebarToggle) els.sidebarToggle.addEventListener('click', toggleSidebar);
+    if (els.sidebarToggleTop) els.sidebarToggleTop.addEventListener('click', toggleSidebar);
 
     // 播放 / 暂停
     els.playBtn.addEventListener('click', function () {
@@ -1117,22 +1886,6 @@
       });
     });
 
-    // 卡带切换
-    els.cartBtns.forEach(function (btn) {
-      btn.addEventListener('click', function () {
-        state.cartridgeId = btn.getAttribute('data-cart');
-        state.t = 0;
-        state.playing = false;
-        els.slider.value = 0;
-        els.cartBtns.forEach(function (b) {
-          b.classList.toggle('active', b === btn);
-        });
-        refreshPlayButton();
-        refreshCartridgeInfo();
-        syncAll();
-      });
-    });
-
     window.addEventListener('resize', resizeCanvas);
     resizeCanvas();
     refreshCartridgeInfo();
@@ -1158,13 +1911,34 @@
     els.playBtn.setAttribute('aria-pressed', state.playing ? 'true' : 'false');
   }
 
+  /** 徽章配色：优先取卡带 badge 字段，否则按反应类型推断 */
+  function badgeClassOf(c) {
+    if (c.badge) return c.badge;
+    var t = c.type || '';
+    if (t.indexOf('化合') >= 0) return 'syn';
+    if (t.indexOf('分解') >= 0) return 'dec';
+    if (t.indexOf('复分解') >= 0) return 'dbl';
+    return 'mix';
+  }
+
   function refreshCartridgeInfo() {
     var c = currentCartridge();
     if (!c) return;
     els.eqText.textContent = c.equation;
     els.typeBadge.textContent = c.type + ' · ' + c.typeDesc;
-    els.typeBadge.className = 'type-badge ' + (c.id === 'h2_combustion' ? 'syn' : 'dec');
+    els.typeBadge.className = 'type-badge ' + badgeClassOf(c);
     els.summaryText.textContent = c.summary;
+
+    // 顶部当前反应名称与化学方程式
+    if (els.curName) els.curName.textContent = c.name;
+    if (els.curEq) els.curEq.textContent = c.equation;
+
+    // 目录栏高亮
+    if (els.sidebarBody) {
+      els.sidebarBody.querySelectorAll('[data-cart]').forEach(function (btn) {
+        btn.classList.toggle('active', btn.getAttribute('data-cart') === c.id);
+      });
+    }
 
     // 图例
     els.legendList.innerHTML = '';
@@ -1237,15 +2011,17 @@
   }
 
   function boot() {
+    // 暴露 Schema 给卡带工具链 / 控制台
+    window.CHEM_SCHEMA = CHEM_SCHEMA;
+    window.validateChemCartridge = validateCartridge;
+
     // Schema 自检（若校验失败会在控制台提示）
-    if (window.validateReactionCartridge && window.ReactionCartridges) {
-      window.ReactionCartridges.forEach(function (c) {
-        var r = window.validateReactionCartridge(c);
-        if (!r.ok && window.console) {
-          console.warn('卡带校验未通过：' + c.id, r.errors);
-        }
-      });
-    }
+    (window.CHEM_CARTRIDGES || []).forEach(function (c) {
+      var r = validateCartridge(c);
+      if (!r.ok && window.console) {
+        console.warn('卡带校验未通过：' + c.id, r.errors);
+      }
+    });
     bindUI();
     requestAnimationFrame(loop);
   }

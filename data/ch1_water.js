@@ -1,9 +1,15 @@
 /* =============================================================================
- * reactions.js — 反应插件数据接口（Reaction Cartridge Schema）
+ * data/ch1_water.js — 第1章 · 水的组成与变化（反应卡带库）
  * -----------------------------------------------------------------------------
- * 设计目标：把「渲染引擎」和「具体化学反应数据」彻底解耦。
- * 想新增一个反应？只需要按下面的 Schema 追加一张卡带（Cartridge），
- * 引擎（app.js）不需要改动一行代码。
+ * S2 模块化改造：从原 reactions.js 完整无损迁移两张水相关卡带：
+ *   1) 氢气燃烧生成水（化合反应）
+ *   2) 水的电解（分解反应）
+ * 卡带动画与解说数据保持 S1 原样，不改一个坐标、不改一句解说。
+ *
+ * 挂载方式（file:// 可用，禁用 ES Module）：
+ *   window.CHEM_CARTRIDGES = window.CHEM_CARTRIDGES || [];
+ *   window.CHEM_CARTRIDGES.push(cartridge...);
+ * 引擎（engine.js）随后读取该注册表，按 Schema 校验并渲染。
  *
  * 坐标约定：
  *   所有 start / mid / end 坐标都是 0~1 的归一化画布坐标（x 向右，y 向下）。
@@ -15,65 +21,6 @@
  * ========================================================================== */
 (function (root) {
   'use strict';
-
-  /* ---------------------------------------------------------------------- */
-  /* Schema 定义（文档 + 校验）                                              */
-  /* ---------------------------------------------------------------------- */
-
-  var ReactionSchema = {
-    version: '1.0',
-    name: 'Reaction Cartridge Schema',
-    description:
-      '一张卡带 = 一个完整化学反应的可视化剧本。引擎只认这个结构，不认具体化学内容。',
-    topLevelFields: [
-      'id', 'name', 'shortName', 'icon', 'equation', 'type', 'typeDesc',
-      'summary', 'legend', 'macro', 'molecular', 'atomic', 'narration'
-    ],
-    timing: {
-      t: '0~1，对应时间轴 0%~100%',
-      phases: [
-        { range: '0.00~0.25', label: '反应前稳态' },
-        { range: '0.25~0.50', label: '激发与化学键断裂 / 活化能垒' },
-        { range: '0.50~0.75', label: '原子重组与电子转移' },
-        { range: '0.75~1.00', label: '生成物新稳态' }
-      ]
-    },
-    atomFields: {
-      id: '字符串，全卡带唯一',
-      el: '元素符号，如 H / O（决定颜色与半径）',
-      start: '[x, y] 归一化起点',
-      mid: '[x, y] 归一化碰撞/过渡点',
-      end: '[x, y] 归一化终点',
-      jitter: '热运动幅度系数，轻原子（H）应更大',
-      shells: '仅 L3 需要：电子层排布，如 [2, 6]'
-    },
-    bondFields: {
-      a: '相连原子 id',
-      b: '相连原子 id',
-      order: '键级：1=单键，2=双键（视觉上画两道）',
-      breakAt: '[t0, t1] 断裂窗口（旧键拉伸→消失）',
-      formAt: '[t0, t1] 形成窗口（新键从远处聚拢→稳定）',
-      pairs: '仅 L3 需要：共用电子对数量'
-    }
-  };
-
-  function validateCartridge(c) {
-    var errors = [];
-    if (!c || typeof c !== 'object') {
-      return { ok: false, errors: ['卡带不是对象'] };
-    }
-    ReactionSchema.topLevelFields.forEach(function (f) {
-      if (!(f in c)) errors.push('缺少字段: ' + f);
-    });
-    if (c.molecular && c.molecular.atoms) {
-      c.molecular.atoms.forEach(function (a) {
-        ['id', 'el', 'start', 'mid', 'end'].forEach(function (f) {
-          if (!(f in a)) errors.push('molecular.atom ' + (a.id || '?') + ' 缺少 ' + f);
-        });
-      });
-    }
-    return { ok: errors.length === 0, errors: errors };
-  }
 
   /* ---------------------------------------------------------------------- */
   /* 图例通用样式                                                            */
@@ -104,6 +51,8 @@
 
   var combustion = {
     id: 'h2_combustion',
+    badge: 'syn',
+    chapter: { id: 'ch1', name: '第1章 · 水的组成与变化', order: 1 },
     name: '氢气燃烧生成水',
     shortName: '氢气燃烧',
     icon: '🔥',
@@ -244,6 +193,8 @@
 
   var electrolysis = {
     id: 'water_electrolysis',
+    badge: 'dec',
+    chapter: { id: 'ch1', name: '第1章 · 水的组成与变化', order: 1 },
     name: '水的电解',
     shortName: '水电解',
     icon: '⚡',
@@ -383,20 +334,9 @@
   };
 
   /* ---------------------------------------------------------------------- */
-  /* 导出                                                                    */
+  /* 挂载到全局卡带注册表                                                    */
   /* ---------------------------------------------------------------------- */
 
-  var cartridges = [combustion, electrolysis];
-
-  root.ReactionSchema = ReactionSchema;
-  root.ReactionCartridges = cartridges;
-  root.validateReactionCartridge = validateCartridge;
-
-  // 自检：两张卡带必须通过 Schema 校验（浏览器控制台可见）
-  cartridges.forEach(function (c) {
-    var r = validateCartridge(c);
-    if (!r.ok && root.console) {
-      root.console.error('[Cartridge] ' + c.id + ' 校验失败:', r.errors);
-    }
-  });
+  root.CHEM_CARTRIDGES = root.CHEM_CARTRIDGES || [];
+  root.CHEM_CARTRIDGES.push(combustion, electrolysis);
 })(typeof window !== 'undefined' ? window : globalThis);
