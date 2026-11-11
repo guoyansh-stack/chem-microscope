@@ -249,7 +249,7 @@
 
   var feHcl = {
     id: 'fe_hcl',
-    badge: 'mix',
+    badge: 'disp',
     chapter: CH,
     name: '铁与稀盐酸反应',
     shortName: '铁 + 稀盐酸',
@@ -554,7 +554,7 @@
 
   var feCuso4 = {
     id: 'fe_cuso4',
-    badge: 'mix',
+    badge: 'disp',
     chapter: CH,
     name: '铁钉与硫酸铜溶液（湿法炼铜）',
     shortName: '铁 + 硫酸铜',

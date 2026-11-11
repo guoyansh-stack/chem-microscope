@@ -112,7 +112,7 @@ if (!Array.isArray(carts) || carts.length === 0) {
 
 var REQUIRED = ['id', 'name', 'shortName', 'icon', 'equation', 'type', 'typeDesc',
   'summary', 'legend', 'macro', 'molecular', 'atomic', 'narration'];
-var BADGES = ['syn', 'dec', 'dbl', 'mix'];
+var BADGES = ['syn', 'dec', 'disp', 'dbl', 'mix'];
 var seenIds = {};
 
 carts.forEach(function (c) {
@@ -131,7 +131,7 @@ carts.forEach(function (c) {
   });
 
   if ('badge' in c && BADGES.indexOf(c.badge) < 0) {
-    fail(where + '：badge 非法「' + c.badge + '」（应为 syn/dec/dbl/mix）');
+    fail(where + '：badge 非法「' + c.badge + '」（应为 syn/dec/disp/dbl/mix）');
   }
 
   /* 3.2 chapter */

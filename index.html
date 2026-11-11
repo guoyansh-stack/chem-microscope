@@ -41,6 +41,7 @@
           </div>
           <button id="sidebarToggle" type="button" title="收起目录">«</button>
         </div>
+        <div class="type-filters" id="typeFilters" role="group" aria-label="按反应类型横向筛选"></div>
         <div class="sidebar-body" id="sidebarBody"></div>
         <div class="sidebar-foot sb-txt">
           共 <span id="cartCount">6</span> 个反应卡带 · 点击左侧任意反应即可切换
@@ -67,6 +68,11 @@
                 L3 原子 / 电子
                 <small>价电子 · 化合价的由来</small>
               </button>
+              <label class="focus-toggle" id="focusToggleWrap" title="开启后，旁观粒子透明度降至 0.22，聚焦真正成键/断键的粒子">
+                <input type="checkbox" id="focusToggle" />
+                <span class="ft-switch" aria-hidden="true"></span>
+                <span class="ft-text">🎯 聚焦反应实质（弱化旁观粒子）</span>
+              </label>
             </div>
 
             <div class="viewport-wrap">
@@ -112,9 +118,11 @@
               <p class="tip">
                 1️⃣ 点左侧目录栏，按章节选择一个化学反应（可折叠目录栏）。<br />
                 2️⃣ 点 L1 / L2 / L3，切换空间尺度。<br />
-                3️⃣ 拖动底部时间轴推杆（或点播放），三个尺度的画
+                3️⃣ 拖动底部时间轴推杆（或点「▶ 自动播放」约 10 秒匀速推演；点下方 4 个阶段标签可一键跳段），
+                三个尺度的画
                 面和右边解说会<span style="color:#ffd54f">实时同步演变</span>。<br />
                 4️⃣ 对比「共价键（水）」与「离子键（镁燃烧）」，看懂电子的“共用”与“得失”！
+                5️⃣ 开启「🎯 聚焦反应实质」，旁观离子变淡，一眼锁定真正成键/断键的主角！
               </p>
             </section>
           </aside>
@@ -123,7 +131,6 @@
         <!-- ========================= 时间轴 ========================= -->
         <section class="panel timeline-panel">
           <div class="timeline-head">
-            <button id="playBtn" type="button">▶ 播放</button>
             <div class="timeline-title">
               反应时间轴推杆 · 0% → 100%（无论在哪个缩放层，拖动它画面都会同步变化）
             </div>
@@ -131,32 +138,33 @@
           </div>
 
           <div class="slider-wrap">
+            <button id="playBtn" type="button" title="约 10 秒匀速推演全程，拖动推杆自动暂停">▶ 自动播放</button>
             <input id="timeline" type="range" min="0" max="1000" value="0" step="1"
                    aria-label="反应时间轴" />
           </div>
 
           <div class="phase-row">
-            <div class="phase-label active">
+            <button type="button" class="phase-label active" data-jump="0">
               反应前稳态
               <span>0% ~ 25%</span>
-            </div>
-            <div class="phase-label">
+            </button>
+            <button type="button" class="phase-label" data-jump="0.25">
               激发 · 断键 · 活化能
               <span>25% ~ 50%</span>
-            </div>
-            <div class="phase-label">
+            </button>
+            <button type="button" class="phase-label" data-jump="0.55">
               原子重组 · 电子转移
               <span>50% ~ 75%</span>
-            </div>
-            <div class="phase-label">
+            </button>
+            <button type="button" class="phase-label" data-jump="0.85">
               生成物新稳态
               <span>75% ~ 100%</span>
-            </div>
+            </button>
           </div>
         </section>
 
         <footer class="footer">
-          S5 图层顺序与安全净空区版 · 纯 HTML5 + CSS + 原生 JavaScript · 双击 index.html 即可运行 · 无需联网<br />
+          S6 教学交互升维版 · 纯 HTML5 + CSS + 原生 JavaScript · 双击 index.html 即可运行 · 无需联网<br />
           架构：engine.js 渲染引擎 + data/*.js 反应卡带库（window.CHEM_CARTRIDGES 标准化挂载）· 新反应像插卡带一样扩展
         </footer>
       </div>

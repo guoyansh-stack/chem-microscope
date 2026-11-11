@@ -99,8 +99,10 @@
     layer: 'L1',          // 'L1' | 'L2' | 'L3'
     t: 0,                 // 0~1 时间轴进度
     playing: false,
-    duration: 14,         // 播放一遍所需的秒数
-    clock: 0              // 动画时钟（驱动热运动）
+    duration: 10,         // 自动推演一遍所需秒数（S6：约 10 秒匀速 0%→100%）
+    clock: 0,             // 动画时钟（驱动热运动）
+    focus: false,         // S6：聚焦反应实质（弱化旁观粒子），仅作用于 L2/L3
+    typeFilter: 'all'     // S6：目录栏反应类型筛选胶囊（all/syn/dec/disp/dbl/mix）
   };
 
   function currentCartridge() {
@@ -135,7 +137,7 @@
       ]
     },
     chapter: '{ id, name, order } 目录栏章节分组',
-    badge: "类型徽章配色：'syn' 化合 | 'dec' 分解 | 'dbl' 复分解 | 'mix' 其他",
+    badge: "类型徽章配色：'syn' 化合 | 'dec' 分解 | 'disp' 置换 | 'dbl' 复分解 | 'mix' 其他",
     atomFields: {
       id: '字符串，全卡带唯一',
       el: '元素符号，如 H / O / C / Mg（决定颜色与半径）',
@@ -2227,8 +2229,94 @@
     };
   }
 
+  /* ====================================================================== */
+  /* 5.5 S6 旁观粒子（观众离子）识别与聚焦降噪                              */
+  /*     判定：未参与成键/断键，且标签含「旁观/观众」，或全程仅做背景游荡。   */
+  /*     命中者（含其静态键离子团，如 SO₄²⁻）绘制时 alpha 降至 0.22。       */
+  /* ====================================================================== */
+
+  var SPECTATOR_ALPHA = 0.22;
+
+  function markText(s) { return /旁观|观众/.test(String(s || '')); }
+
+  /** 计算某微观层的旁观粒子 id 集合（返回 {id: true}） */
+  function computeSpectators(cartridge, layerKey) {
+    var data = cartridge[layerKey] || {};
+    var atoms = data.atoms || [];
+    var bonds = data.bonds || [];
+    var spec = {};
+    if (!atoms.length) return spec;
+
+    // ① 图例级元素标记：legend 中带 el 且标签含 旁观/观众（如 Cl⁻、SO₄²⁻、Na⁺）
+    var specEls = {};
+    (cartridge.legend || []).forEach(function (item) {
+      if (item && item.el && markText(item.label)) specEls[item.el] = true;
+    });
+
+    // ② 静态键（全程无断无成）并查集 + 动态键参与者集合
+    var parent = {};
+    function find(x) {
+      while (parent[x] !== x) { parent[x] = parent[parent[x]]; x = parent[x]; }
+      return x;
+    }
+    atoms.forEach(function (a) { parent[a.id] = a.id; });
+    var dynamic = {};
+    bonds.forEach(function (b) {
+      if (parent[b.a] == null || parent[b.b] == null) return;
+      if (b.breakAt || b.formAt) {
+        dynamic[b.a] = true;
+        dynamic[b.b] = true;
+      } else {
+        var ra = find(b.a), rb = find(b.b);
+        if (ra !== rb) parent[ra] = rb;
+      }
+    });
+
+    // ③ 显式标记（atom.label / ion.label）或图例元素标记 → 整个静态键团旁观
+    atoms.forEach(function (a) {
+      if (a.catalyst) return;
+      if (markText(a.label) || (a.ion && markText(a.ion.label)) || specEls[a.el]) {
+        spec[find(a.id)] = true;
+      }
+    });
+
+    // ④ 背景游荡回退：整团无断键/成键参与且位移极小
+    //    带 ion 徽标的原子要么已被③标为观众，要么是主角（如 Fe²⁺/Cu 电子争夺），不走游荡判定
+    var wander = {};
+    atoms.forEach(function (a) {
+      if (a.catalyst || a.ion) return;
+      var r = find(a.id);
+      var dx = Math.max(
+        Math.abs(a.start[0] - a.mid[0]),
+        Math.abs(a.mid[0] - a.end[0]),
+        Math.abs(a.start[0] - a.end[0])
+      );
+      var dy = Math.max(
+        Math.abs(a.start[1] - a.mid[1]),
+        Math.abs(a.mid[1] - a.end[1]),
+        Math.abs(a.start[1] - a.end[1])
+      );
+      var w = wander[r] || (wander[r] = { disp: 0, dyn: false });
+      w.disp = Math.max(w.disp, dx, dy);
+      if (dynamic[a.id]) w.dyn = true;
+    });
+    Object.keys(wander).forEach(function (r) {
+      if (!wander[r].dyn && wander[r].disp < 0.18) spec[r] = true;
+    });
+
+    // ⑤ 展开到团内每个成员
+    var out = {};
+    atoms.forEach(function (a) {
+      if (spec[find(a.id)]) out[a.id] = true;
+    });
+    return out;
+  }
+
   function renderMolecular(cartridge, t, time) {
     var mol = cartridge.molecular;
+
+    // S6：聚焦模式下旁观粒子降噪（仅 L2/L3）
+    var spec = state.focus ? computeSpectators(cartridge, 'molecular') : {};
 
     // 安全净空区：顶部留给层标题，底部留给解说框 + 相位条
     safe.top = TITLE_ZONE;
@@ -2248,17 +2336,19 @@
       pos[a.id] = atomPos(a, t, time);
     });
 
-    // ② 化学键连线 + 断键火花
+    // ② 化学键连线 + 断键火花（旁观粒子相关键整体降噪）
     mol.bonds.forEach(function (b) {
       var st = bondState(b, t);
       if (!st.visible) return;
       var pa = pos[b.a], pb = pos[b.b];
       if (!pa || !pb) return;
+      var dim = (spec[b.a] || spec[b.b]) ? SPECTATOR_ALPHA : 1;
       drawBond(pa[0], pa[1], pb[0], pb[1], b.order, {
-        alpha: st.alpha,
+        alpha: st.alpha * dim,
         stretch: st.stretch,
         glow: '#7fd4ff'
       });
+      if (dim < 1) return; // 旁观相关键不再闪烁火花，让焦点留给主角
       if (st.breaking && st.breakK != null) {
         drawBreakSpark((pa[0] + pb[0]) / 2, (pa[1] + pb[1]) / 2, st.breakK, time);
       }
@@ -2270,8 +2360,9 @@
     // ③ 原子球体与符号（胶囊入队，稍后置顶）
     mol.atoms.forEach(function (a) {
       var p = pos[a.id];
+      var dim = spec[a.id] ? SPECTATOR_ALPHA : 1;
       if (a.catalyst) drawCatalystRing(p[0], p[1], time, 1);
-      drawAtom(p[0], p[1], a.el, 1, 1, a.label);
+      drawAtom(p[0], p[1], a.el, 1, dim, a.label);
       if (a.catalyst) drawPill(p[0], p[1] - 52, '催化剂', '#b39ddb', 0.9);
     });
 
@@ -2356,6 +2447,9 @@
   function renderAtomic(cartridge, t, time) {
     var at = cartridge.atomic;
 
+    // S6：聚焦模式下旁观粒子降噪（仅 L2/L3）
+    var spec = state.focus ? computeSpectators(cartridge, 'atomic') : {};
+
     // 先量出底部结论框高度，收敛出中间纯净绘制带
     var wrap = at.takeaway ? wrapText(at.takeaway, viewW - 80) : [];
     var boxH = wrap.length ? 26 + wrap.length * 20 : 0;
@@ -2377,22 +2471,24 @@
       pos[a.id] = atomPos(a, t, time);
     });
 
-    // ② 化学键连线 / 离子键虚线 + 断键火花（键标签入队，⑤ 置顶绘制）
+    // ② 化学键连线 / 离子键虚线 + 断键火花（键标签入队，⑤ 置顶绘制；旁观相关键降噪）
     at.bonds.forEach(function (b) {
       var st = bondState(b, t);
       if (!st.visible) return;
       var pa = pos[b.a], pb = pos[b.b];
       if (!pa || !pb) return;
+      var dim = (spec[b.a] || spec[b.b]) ? SPECTATOR_ALPHA : 1;
 
       if (b.ionic) {
         // 离子键：虚线静电引力，无共用电子对
         drawBond(pa[0], pa[1], pb[0], pb[1], 1, {
-          alpha: st.alpha * 0.95,
+          alpha: st.alpha * 0.95 * dim,
           stretch: st.stretch,
           glow: '#ffb74d',
           color: '#ffd9a0',
           dashed: true
         });
+        if (dim < 1) return;
         if (st.breaking && st.breakK != null) {
           drawBreakSpark((pa[0] + pb[0]) / 2, (pa[1] + pb[1]) / 2, st.breakK, time);
         }
@@ -2403,11 +2499,12 @@
       }
 
       drawBond(pa[0], pa[1], pb[0], pb[1], b.order, {
-        alpha: st.alpha * 0.9,
+        alpha: st.alpha * 0.9 * dim,
         stretch: st.stretch,
         glow: '#ffe082',
         color: '#ffe9a8'
       });
+      if (dim < 1) return;
       if (st.breaking && st.breakK != null) {
         drawBreakSpark((pa[0] + pb[0]) / 2, (pa[1] + pb[1]) / 2, st.breakK, time);
       }
@@ -2416,17 +2513,18 @@
       }
     });
 
-    // ③ 原子球体与符号（含催化剂光环）
+    // ③ 原子球体与符号（含催化剂光环；旁观粒子整体降噪）
     at.atoms.forEach(function (a) {
       var p = pos[a.id];
+      var dim = spec[a.id] ? SPECTATOR_ALPHA : 1;
       if (a.catalyst) drawCatalystRing(p[0], p[1], time, 1);
-      drawAtom(p[0], p[1], a.el, 1, 1, a.catalyst ? a.label : undefined);
+      drawAtom(p[0], p[1], a.el, 1, dim, a.catalyst ? a.label : undefined);
       if (a.catalyst) drawPill(p[0], p[1] - 52, '催化剂 MnO₂', '#b39ddb', 0.9);
     });
 
     // ④ 外层电子轨道与电子点（轨道线 → 共用电子对 → 转移电子 → 各层电子）
     at.atoms.forEach(function (a) {
-      if (!a.catalyst) drawShellOrbits(a, pos[a.id]);
+      if (!a.catalyst) drawShellOrbits(a, pos[a.id], spec[a.id] ? SPECTATOR_ALPHA : 1);
     });
     at.bonds.forEach(function (b) {
       if (b.ionic) return;
@@ -2434,9 +2532,10 @@
       if (!st.visible) return;
       var pa = pos[b.a], pb = pos[b.b];
       if (!pa || !pb) return;
-      // 共用电子对
+      // 共用电子对（旁观相关键同步降噪）
+      var dim = (spec[b.a] || spec[b.b]) ? SPECTATOR_ALPHA : 1;
       var pairs = b.pairs || (b.order === 2 ? 2 : 1);
-      var pairAlpha = st.alpha;
+      var pairAlpha = st.alpha * dim;
       for (var p = 0; p < pairs; p++) {
         var offset = (p - (pairs - 1) / 2) * 16;
         var mx = (pa[0] + pb[0]) / 2;
@@ -2450,7 +2549,7 @@
         drawElectron(mx + ox - wob * 0.6, my + oy - wob, 5, pairAlpha);
       }
     });
-    // 电子转移动画（电子点在④，说明胶囊入队在⑤）
+    // 电子转移动画（电子点在④，说明胶囊入队在⑤）——反应实质主角，不降噪
     (at.transfers || []).forEach(function (tr) {
       var k = windowT(t, tr.window[0], tr.window[1]);
       if (k <= 0.01 || k >= 0.99) return;
@@ -2463,7 +2562,7 @@
       }
     });
     at.atoms.forEach(function (a) {
-      if (!a.catalyst) drawShellElectrons(a, pos[a.id], t, time);
+      if (!a.catalyst) drawShellElectrons(a, pos[a.id], t, time, spec[a.id] ? SPECTATOR_ALPHA : 1);
     });
 
     // ⑤ HUD：左上角层标题 + 底部结论框（独立底带，内容区零重叠）
@@ -2507,16 +2606,17 @@
     flushPills();
   }
 
-  /** ④ 电子层轨道（虚线圈，画在原子球之上） */
-  function drawShellOrbits(atom, p) {
+  /** ④ 电子层轨道（虚线圈，画在原子球之上）；dim=旁观降噪系数 */
+  function drawShellOrbits(atom, p, dim) {
     if (atom.catalyst) return;
     var st = atomStyle(atom.el);
     var shells = atom.shells || [1];
     var x = p[0], y = p[1];
+    var d = dim == null ? 1 : dim;
     for (var s = 0; s < shells.length; s++) {
       var rr = st.r + 22 + s * 26;
       ctx.save();
-      ctx.globalAlpha = 0.30;
+      ctx.globalAlpha = 0.30 * d;
       ctx.strokeStyle = 'rgba(180,210,255,0.8)';
       ctx.lineWidth = 1.2;
       ctx.setLineDash([3, 5]);
@@ -2529,11 +2629,12 @@
   }
 
   /** ④ 电子点（价电子高亮旋转 + 内层电子）；离子电荷徽标入队到⑤ */
-  function drawShellElectrons(atom, p, t, time) {
+  function drawShellElectrons(atom, p, t, time, dim) {
     if (atom.catalyst) return;
     var st = atomStyle(atom.el);
     var shells = atom.shells || [1];
     var x = p[0], y = p[1];
+    var d = dim == null ? 1 : dim;
     var maxR = st.r + 22 + (shells.length - 1) * 26;
 
     // 价电子（最外层）高亮旋转
@@ -2544,7 +2645,7 @@
       var ang = spin + (i / outerCount) * Math.PI * 2;
       var ex = x + Math.cos(ang) * outerR;
       var ey = y + Math.sin(ang) * outerR;
-      drawElectron(ex, ey, 5, 0.95);
+      drawElectron(ex, ey, 5, 0.95 * d);
     }
 
     // 内层电子（画小一点）
@@ -2553,14 +2654,14 @@
       var rr2 = st.r + 22 + s2 * 26;
       for (var j = 0; j < cnt; j++) {
         var ang2 = time * 0.8 + (j / cnt) * Math.PI * 2 + s2;
-        drawElectron(x + Math.cos(ang2) * rr2, y + Math.sin(ang2) * rr2, 3, 0.55);
+        drawElectron(x + Math.cos(ang2) * rr2, y + Math.sin(ang2) * rr2, 3, 0.55 * d);
       }
     }
 
     // 离子电荷徽标（如 Mg²⁺ / O²⁻），t 到达 ion.from 后显示
     if (atom.ion && t >= (atom.ion.from == null ? 0 : atom.ion.from)) {
       var ionFrom = atom.ion.from == null ? 0 : atom.ion.from;
-      var fade = windowT(t, ionFrom, ionFrom + 0.05);
+      var fade = windowT(t, ionFrom, ionFrom + 0.05) * d;
       drawPill(x, y + maxR + 24, atom.ion.label, '#ffd54f', fade);
     }
   }
@@ -2633,10 +2734,13 @@
 
   function $(id) { return document.getElementById(id); }
 
-  /** 按章节分组构建左侧目录栏 */
+  /** 按章节分组构建左侧目录栏（S6：支持反应类型筛选胶囊） */
   function buildSidebar() {
     if (!els.sidebarBody) return;
-    var list = window.CHEM_CARTRIDGES || [];
+    var all = window.CHEM_CARTRIDGES || [];
+    var list = all.filter(function (c) {
+      return state.typeFilter === 'all' || badgeClassOf(c) === state.typeFilter;
+    });
     var groups = [];
     var byId = {};
     list.forEach(function (c) {
@@ -2661,15 +2765,46 @@
       });
       html += '</div>';
     });
+    if (!list.length) {
+      html = '<div class="sb-empty">该类型暂无反应卡带</div>';
+    }
     els.sidebarBody.innerHTML = html;
 
-    if (els.cartCount) els.cartCount.textContent = String(list.length);
+    if (els.cartCount) els.cartCount.textContent = String(all.length);
 
     // 事件委托：切换卡带
     els.sidebarBody.querySelectorAll('[data-cart]').forEach(function (btn) {
       btn.addEventListener('click', function () {
         selectCartridge(btn.getAttribute('data-cart'));
       });
+    });
+  }
+
+  /** S6：反应类型横向筛选胶囊（全部/化合/分解/置换/复分解/其他） */
+  function buildTypeFilters() {
+    if (!els.typeFilters) return;
+    var list = window.CHEM_CARTRIDGES || [];
+    var defs = [
+      { key: 'all', label: '全部 (' + list.length + ')' },
+      { key: 'syn', label: '化合' },
+      { key: 'dec', label: '分解' },
+      { key: 'disp', label: '置换' },
+      { key: 'dbl', label: '复分解' },
+      { key: 'mix', label: '其他' }
+    ];
+    els.typeFilters.innerHTML = '';
+    defs.forEach(function (d) {
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'filter-pill' + (state.typeFilter === d.key ? ' active' : '');
+      b.setAttribute('data-filter', d.key);
+      b.textContent = d.label;
+      b.addEventListener('click', function () {
+        state.typeFilter = d.key;
+        buildTypeFilters();
+        buildSidebar();
+      });
+      els.typeFilters.appendChild(b);
     });
   }
 
@@ -2725,13 +2860,17 @@
     els.cartCount = $('cartCount');
     els.curName = $('curName');
     els.curEq = $('curEq');
+    els.typeFilters = $('typeFilters');
+    els.focusToggle = $('focusToggle');
+    els.focusToggleWrap = $('focusToggleWrap');
 
+    buildTypeFilters();
     buildSidebar();
 
     if (els.sidebarToggle) els.sidebarToggle.addEventListener('click', toggleSidebar);
     if (els.sidebarToggleTop) els.sidebarToggleTop.addEventListener('click', toggleSidebar);
 
-    // 播放 / 暂停
+    // 播放 / 暂停（S6：▶ 自动播放 ≈ 10 秒匀速 0%→100%）
     els.playBtn.addEventListener('click', function () {
       if (state.playing) {
         state.playing = false;
@@ -2742,13 +2881,34 @@
       refreshPlayButton();
     });
 
-    // 时间轴拖拽
+    // 时间轴拖拽（拖动自动暂停）
     els.slider.addEventListener('input', function () {
       state.t = clamp01(parseInt(els.slider.value, 10) / 1000);
       state.playing = false;
       refreshPlayButton();
       syncAll();
     });
+
+    // S6：阶段标签一键跳至该阶段起始时间点（0% / 25% / 55% / 85%）
+    els.phaseLabels.forEach(function (el) {
+      var jump = parseFloat(el.getAttribute('data-jump'));
+      el.addEventListener('click', function () {
+        if (isNaN(jump)) return;
+        state.t = clamp01(jump);
+        state.playing = false;
+        if (els.slider) els.slider.value = Math.round(state.t * 1000);
+        refreshPlayButton();
+        syncAll();
+      });
+    });
+
+    // S6：聚焦反应实质开关（弱化旁观粒子）
+    if (els.focusToggle) {
+      els.focusToggle.addEventListener('change', function () {
+        state.focus = !!els.focusToggle.checked;
+        render();
+      });
+    }
 
     // 三层切换
     els.layerBtns.forEach(function (btn) {
@@ -2757,6 +2917,9 @@
         els.layerBtns.forEach(function (b) {
           b.classList.toggle('active', b === btn);
         });
+        if (els.focusToggleWrap) {
+          els.focusToggleWrap.classList.toggle('ft-dimmed', state.layer === 'L1');
+        }
         render();
       });
     });
@@ -2782,7 +2945,7 @@
 
   function refreshPlayButton() {
     if (!els.playBtn) return;
-    els.playBtn.textContent = state.playing ? '⏸ 暂停' : '▶ 播放';
+    els.playBtn.textContent = state.playing ? '⏸ 暂停' : '▶ 自动播放';
     els.playBtn.setAttribute('aria-pressed', state.playing ? 'true' : 'false');
   }
 
@@ -2791,8 +2954,9 @@
     if (c.badge) return c.badge;
     var t = c.type || '';
     if (t.indexOf('化合') >= 0) return 'syn';
-    if (t.indexOf('分解') >= 0) return 'dec';
     if (t.indexOf('复分解') >= 0) return 'dbl';
+    if (t.indexOf('分解') >= 0) return 'dec';
+    if (t.indexOf('置换') >= 0) return 'disp';
     return 'mix';
   }
 
