@@ -2818,11 +2818,17 @@
     refreshCartridgeInfo();
     syncAll();
     render();
+    if (isMobileViewport()) setMobileSidebar(false);    // 移动端选完自动收起抽屉
   }
 
   /** 折叠 / 展开目录栏 */
   function toggleSidebar() {
     if (!els.sidebar) return;
+    // 窄屏形态下切换为浮动抽屉的开合
+    if (isMobileViewport()) {
+      setMobileSidebar(!els.sidebar.classList.contains('mobile-open'));
+      return;
+    }
     var collapsed = els.sidebar.classList.toggle('collapsed');
     var shell = els.sidebar.parentElement;
     if (shell) shell.classList.toggle('sb-hidden', collapsed);
@@ -2835,6 +2841,49 @@
     }
     // 折叠动画后重排画布
     window.setTimeout(resizeCanvas, 280);
+  }
+
+  /** 窄屏（<820px）判定 —— 手机/平板竖屏走浮动目录抽屉形态 */
+  function isMobileViewport() {
+    return !!(window.matchMedia && window.matchMedia('(max-width: 820px)').matches);
+  }
+
+  /** 移动端浮动目录抽屉 开 / 关 */
+  function setMobileSidebar(open) {
+    if (!els.sidebar) return;
+    els.sidebar.classList.toggle('mobile-open', !!open);
+    if (els.sideBackdrop) els.sideBackdrop.hidden = !open;
+    document.body.classList.toggle('side-open', !!open);
+    if (els.sidebarToggleTop) {
+      els.sidebarToggleTop.textContent = open ? '📂 关闭目录' : '📂 打开目录';
+    }
+    if (els.sidebarToggle) {
+      els.sidebarToggle.textContent = '«';
+      els.sidebarToggle.title = '关闭目录';
+    }
+  }
+
+  /** 跨 820px 断点时同步目录栏形态，避免桌面折叠态与移动抽屉态串台 */
+  function syncSidebarForViewport() {
+    if (!els.sidebar) return;
+    if (isMobileViewport()) {
+      els.sidebar.classList.remove('collapsed');
+      var shell = els.sidebar.parentElement;
+      if (shell) shell.classList.remove('sb-hidden');
+      setMobileSidebar(els.sidebar.classList.contains('mobile-open'));
+      return;
+    }
+    els.sidebar.classList.remove('mobile-open');
+    if (els.sideBackdrop) els.sideBackdrop.hidden = true;
+    document.body.classList.remove('side-open');
+    var collapsed = els.sidebar.classList.contains('collapsed');
+    if (els.sidebarToggle) {
+      els.sidebarToggle.textContent = collapsed ? '»' : '«';
+      els.sidebarToggle.title = collapsed ? '展开目录' : '收起目录';
+    }
+    if (els.sidebarToggleTop) {
+      els.sidebarToggleTop.textContent = collapsed ? '📂 展开目录' : '📂 收起目录';
+    }
   }
 
   function bindUI() {
@@ -2863,6 +2912,7 @@
     els.typeFilters = $('typeFilters');
     els.focusToggle = $('focusToggle');
     els.focusToggleWrap = $('focusToggleWrap');
+    els.sideBackdrop = $('sideBackdrop');   // 移动端目录抽屉遮罩
 
     buildTypeFilters();
     buildSidebar();
@@ -2924,11 +2974,15 @@
       });
     });
 
-    window.addEventListener('resize', resizeCanvas);
+    window.addEventListener('resize', function () {
+      resizeCanvas();
+      syncSidebarForViewport();   // 跨断点时同步目录栏形态
+    });
     resizeCanvas();
     refreshCartridgeInfo();
     refreshPlayButton();
     syncAll();
+    syncSidebarForViewport();
   }
 
   function resizeCanvas() {
