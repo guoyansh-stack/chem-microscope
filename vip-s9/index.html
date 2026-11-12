@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex,nofollow" />
+  <title>初中化学 · 宏微观三层穿透显微镜</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%2312203a'/%3E%3Ccircle cx='32' cy='30' r='12' fill='%23ff6b6b'/%3E%3Ccircle cx='18' cy='44' r='7' fill='%237fd4ff'/%3E%3Ccircle cx='46' cy='44' r='7' fill='%237fd4ff'/%3E%3C/svg%3E" />
+  <link rel="stylesheet" href="style.css" />
+  <!-- VIP-S9 私享暗门：防爬 + 轻量口令锁（口令经编码比对，不含明文） -->
+  <style>
+    html.vip-pending .app { display: none !important; }
+    #vipLock {
+      position: fixed; inset: 0; z-index: 99999;
+      display: flex; align-items: center; justify-content: center;
+      background: rgba(5, 10, 20, 0.94);
+      backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+      font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
+    }
+    #vipLock .vip-card {
+      width: min(320px, 86vw); padding: 28px 24px 24px;
+      border-radius: 18px;
+      background: linear-gradient(160deg, #16233c, #121c30);
+      border: 1px solid rgba(140, 175, 230, 0.3);
+      box-shadow: 0 24px 64px rgba(0, 0, 0, 0.55);
+      text-align: center;
+    }
+    #vipLock h2 { margin: 0 0 6px; font-size: 17px; color: #eaf7ff; }
+    #vipLock p { margin: 0 0 16px; font-size: 12px; color: #93a4c3; line-height: 1.7; }
+    #vipLock input {
+      width: 100%; box-sizing: border-box; padding: 11px 14px;
+      border-radius: 11px; border: 1px solid rgba(140, 175, 230, 0.35);
+      background: rgba(255, 255, 255, 0.06); color: #eaf7ff;
+      font-size: 16px; letter-spacing: 4px; text-align: center; outline: none;
+    }
+    #vipLock input:focus { border-color: #4dd0e1; }
+    #vipLock button {
+      width: 100%; margin-top: 12px; padding: 11px 0; border: none;
+      border-radius: 11px; background: linear-gradient(145deg, #4dd0e1, #2ba7ba);
+      color: #06202a; font-weight: 800; font-size: 14px; cursor: pointer;
+    }
+    #vipLock .err { min-height: 18px; margin-top: 10px; font-size: 11.5px; color: #f48fb1; }
+  </style>
+  <script>
+    /* VIP-S9 访问锁：通过后 localStorage['chem_vip_auth']='1' 同设备免密；
+       TOK 是口令 base64 形式的字符编码，源码不落明文口令 */
+    (function () {
+      var KEY = 'chem_vip_auth';
+      var TOK = [79, 68, 103, 52, 79, 65, 61, 61];
+      function secret() {
+        var s = '';
+        for (var i = 0; i < TOK.length; i++) s += String.fromCharCode(TOK[i]);
+        return atob(s);
+      }
+      function authed() {
+        try { return localStorage.getItem(KEY) === '1'; } catch (e) { return false; }
+      }
+      if (authed()) return;
+      document.documentElement.classList.add('vip-pending');
+      document.addEventListener('DOMContentLoaded', function () {
+        var box = document.createElement('div');
+        box.id = 'vipLock';
+        box.innerHTML =
+          '<div class="vip-card">' +
+          '<h2>🔬 私享实验室</h2>' +
+          '<p>本目录为受邀私享版<br />请输入访问口令</p>' +
+          '<input id="vipPwd" type="password" inputmode="numeric" maxlength="12" autocomplete="off" placeholder="请输入口令" />' +
+          '<button id="vipGo" type="button">进入</button>' +
+          '<div class="err" id="vipErr"></div>' +
+          '</div>';
+        document.body.appendChild(box);
+        var pwd = box.querySelector('#vipPwd');
+        var err = box.querySelector('#vipErr');
+        function tryEnter() {
+          if (pwd.value === secret()) {
+            try { localStorage.setItem(KEY, '1'); } catch (e) {}
+            location.reload();
+            return;
+          }
+          err.textContent = '口令不正确，请重试';
+          pwd.value = '';
+          pwd.focus();
+        }
+        box.querySelector('#vipGo').addEventListener('click', tryEnter);
+        pwd.addEventListener('keydown', function (e) {
+          if (e.key === 'Enter') tryEnter();
+        });
+        pwd.focus();
+      });
+    })();
+  </script>
+</head>
+<body>
+  <div class="app">
+
+    <!-- ========================= 顶栏 ========================= -->
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-badge">🔬</div>
+        <div>
+          <h1>初中化学 · 宏微观三层穿透显微镜</h1>
+          <p>拖动时间轴，在 L1 宏观 / L2 分子 / L3 原子 三层之间自由穿透，看清化学反应的真相</p>
+        </div>
+      </div>
+
+      <div class="now-playing" id="nowPlaying">
+        <div class="np-label">当前反应</div>
+        <div class="np-name-row">
+          <div class="np-name" id="curName">氢气燃烧生成水</div>
+          <button id="curStarBtn" class="star-btn" type="button" aria-label="星标收藏" aria-pressed="false"
+                  title="标记为重点攻克（考前集中复习）">☆</button>
+        </div>
+        <div class="np-eq" id="curEq">2H₂ + O₂ → 2H₂O</div>
+      </div>
+
+      <!-- S9：桌面端键盘快捷键提示徽章 -->
+      <div class="kbd-hints" title="空格=播放/暂停 · ←/→=时间轴±5%（Shift=±1%） · 1/2/3=L1/L2/L3视界 · F=聚焦反应实质 · Esc=关闭概念显微镜">
+        <span class="kbd-tag">⌨ 快捷键</span>
+        <span class="kbd-chip"><kbd>空格</kbd>播放</span>
+        <span class="kbd-chip"><kbd>←</kbd><kbd>→</kbd>步进</span>
+        <span class="kbd-chip"><kbd>Shift</kbd>精调</span>
+        <span class="kbd-chip"><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd>视界</span>
+        <span class="kbd-chip"><kbd>F</kbd>聚焦</span>
+        <span class="kbd-chip"><kbd>Esc</kbd>关词典</span>
+      </div>
+
+      <button id="sidebarToggleTop" class="side-toggle-top" type="button">📂 收起目录</button>
+    </header>
+
+    <!-- ========================= 主体：目录栏 + 内容 ========================= -->
+    <div class="shell">
+
+      <!-- 左：可折叠章节与反应目录栏 -->
+      <nav class="sidebar panel" id="sidebar" aria-label="八年级化学章节与反应目录">
+        <div class="sidebar-head">
+          <div class="sidebar-title">
+            <span class="sb-ico">📚</span>
+            <span class="sb-txt">八年级化学 · 章节与反应目录</span>
+          </div>
+          <button id="sidebarToggle" type="button" title="收起目录">«</button>
+        </div>
+        <div class="type-filters" id="typeFilters" role="group" aria-label="按反应类型横向筛选"></div>
+        <div class="sidebar-body" id="sidebarBody"></div>
+        <div class="sidebar-foot sb-txt">
+          共 <span id="cartCount">6</span> 个反应卡带 · 点击左侧任意反应即可切换
+        </div>
+      </nav>
+
+      <!-- 右：显微镜 + 解说 + 时间轴 -->
+      <div class="content">
+
+        <div class="main">
+
+          <!-- 显微镜视场 -->
+          <section class="panel">
+            <div class="zoom-tabs" role="tablist" aria-label="空间尺度切换">
+              <button class="zoom-tab active" data-layer="L1" type="button">
+                L1 宏观实验台
+                <small>肉眼可见的仪器与现象</small>
+              </button>
+              <button class="zoom-tab" data-layer="L2" type="button">
+                L2 分子动力学
+                <small>热运动 · 碰撞 · 断键成键</small>
+              </button>
+              <button class="zoom-tab" data-layer="L3" type="button">
+                L3 原子 / 电子
+                <small>价电子 · 化合价的由来</small>
+              </button>
+              <label class="focus-toggle" id="focusToggleWrap" title="开启后，旁观粒子透明度降至 0.22，聚焦真正成键/断键的粒子">
+                <input type="checkbox" id="focusToggle" />
+                <span class="ft-switch" aria-hidden="true"></span>
+                <span class="ft-text">🎯 聚焦反应实质（弱化旁观粒子）</span>
+              </label>
+            </div>
+
+            <div class="viewport-wrap">
+              <canvas id="viewport" aria-label="反应显微镜视场"></canvas>
+            </div>
+
+            <div class="equation-bar">
+              <div id="eqText">2H₂ + O₂  →点燃→  2H₂O</div>
+              <div id="typeBadge" class="type-badge syn">化合反应 · 多变一 · 合成</div>
+              <div id="summaryText">
+                两种气体（氢气、氧气）点燃后变成一种液体（水），同时放出大量热。
+              </div>
+            </div>
+          </section>
+
+          <!-- 右：解说与图例 -->
+          <aside class="side">
+            <section class="panel card narr">
+              <h2><span class="dot"></span>人话解说卡片</h2>
+              <div class="narr-phase-row">
+                <div id="narrPhase">进度 0%</div>
+              </div>
+              <h3 id="narrTitle">① 反应前 · 稳态</h3>
+              <p id="narrText">
+                氢气分子（H₂）和氧气分子（O₂）在容器里自由漂浮。
+                它们各自“手拉手”（化学键）结合得很稳，暂时谁也不理谁。
+              </p>
+            </section>
+
+            <section class="panel card">
+              <h2><span class="dot" style="background:#ffd54f;box-shadow:0 0 10px #ffd54f"></span>图例</h2>
+              <ul class="legend-list" id="legendList">
+                <li><span class="legend-dot" style="background:#7fd4ff"></span>氢原子 H（个头小、跑得快）</li>
+                <li><span class="legend-dot" style="background:#ff6b6b"></span>氧原子 O（个头大、更稳重）</li>
+                <li><span class="legend-dot" style="background:#9ae6ff"></span>化学键 = 手拉手</li>
+                <li><span class="legend-dot" style="background:#ffe082"></span>共用电子对</li>
+                <li><span class="legend-dot" style="background:#ffd54f"></span>电子</li>
+              </ul>
+            </section>
+
+            <section class="panel card">
+              <h2><span class="dot" style="background:#b39ddb;box-shadow:0 0 10px #b39ddb"></span>怎么玩</h2>
+              <p class="tip">
+                1️⃣ 点左侧目录栏，按章节选择一个化学反应（可折叠目录栏）。<br />
+                2️⃣ 点 L1 / L2 / L3，切换空间尺度。<br />
+                3️⃣ 拖动底部时间轴推杆（或点「▶ 自动播放」约 10 秒匀速推演；点下方 4 个阶段标签可一键跳段），
+                三个尺度的画
+                面和右边解说会<span style="color:#ffd54f">实时同步演变</span>。<br />
+                4️⃣ 对比「共价键（水）」与「离子键（镁燃烧）」，看懂电子的“共用”与“得失”！
+                5️⃣ 开启「🎯 聚焦反应实质」，旁观离子变淡，一眼锁定真正成键/断键的主角！
+              </p>
+            </section>
+          </aside>
+        </div>
+
+        <!-- ========================= 时间轴 ========================= -->
+        <section class="panel timeline-panel">
+          <div class="timeline-head">
+            <div class="timeline-title">
+              反应时间轴推杆 · 0% → 100%（无论在哪个缩放层，拖动它画面都会同步变化）
+            </div>
+            <div id="tLabel">0%</div>
+          </div>
+
+          <div class="slider-wrap">
+            <button id="playBtn" type="button" title="约 10 秒匀速推演全程，拖动推杆自动暂停">▶ 自动播放</button>
+            <input id="timeline" type="range" min="0" max="1000" value="0" step="1"
+                   aria-label="反应时间轴" />
+          </div>
+
+          <div class="phase-row">
+            <button type="button" class="phase-label active" data-jump="0">
+              反应前稳态
+              <span>0% ~ 25%</span>
+            </button>
+            <button type="button" class="phase-label" data-jump="0.25">
+              激发 · 断键 · 活化能
+              <span>25% ~ 50%</span>
+            </button>
+            <button type="button" class="phase-label" data-jump="0.55">
+              原子重组 · 电子转移
+              <span>50% ~ 75%</span>
+            </button>
+            <button type="button" class="phase-label" data-jump="0.85">
+              生成物新稳态
+              <span>75% ~ 100%</span>
+            </button>
+          </div>
+        </section>
+
+        <!-- ================= S8 · 拓展阅读与概念词典（纯 DOM，画布零侵入） ================= -->
+        <section class="panel ext-panel" id="extPanel">
+          <div class="ext-head">
+            <h2><span class="dot" style="background:#4dd0e1;box-shadow:0 0 10px #4dd0e1"></span>🚀 拓展阅读与概念词典</h2>
+            <div class="ext-tabs" role="tablist" aria-label="拓展阅读与词典切换">
+              <button class="ext-tab active" data-ext-tab="reaction" type="button" role="tab">🚀 本反应科学拓展</button>
+              <button class="ext-tab" data-ext-tab="glossary" type="button" role="tab">📖 八年级微观黑话词典</button>
+            </div>
+          </div>
+
+          <div class="ext-pane" id="extReactionPane" role="tabpanel">
+            <h3 class="ext-title" id="extTitle">《科学小剧场》</h3>
+            <p class="ext-story" id="extStory"></p>
+            <div class="ext-question">💭 脑洞追问：<span id="extQuestion"></span></div>
+          </div>
+
+          <div class="ext-pane hidden" id="extGlossaryPane" role="tabpanel">
+            <p class="ext-hint">像翻科幻设定集一样查漏补缺 —— 点击任意卡片，打开「🔬 概念显微镜」看透它。</p>
+            <div class="glossary-grid" id="glossaryGrid"></div>
+          </div>
+        </section>
+
+        <footer class="footer">
+          S6 教学交互升维版 · 纯 HTML5 + CSS + 原生 JavaScript · 双击 index.html 即可运行 · 无需联网<br />
+          架构：engine.js 渲染引擎 + data/*.js 反应卡带库（window.CHEM_CARTRIDGES 标准化挂载）· 新反应像插卡带一样扩展
+        </footer>
+      </div>
+    </div>
+  </div>
+
+  <!-- S9 · 移动端浮动目录抽屉遮罩 -->
+  <div class="side-backdrop" id="sideBackdrop" hidden></div>
+
+  <!-- ================= S8 · 概念显微镜（术语解释弹层，纯 DOM，画布零侵入） ================= -->
+  <div class="term-drawer" id="termDrawer" hidden>
+    <div class="term-backdrop" id="termBackdrop"></div>
+    <div class="term-card" role="dialog" aria-modal="true" aria-labelledby="termTitle">
+      <button class="term-close" id="termClose" type="button" title="关闭">✕</button>
+      <div class="term-head">🔬 概念显微镜 · 术语人话破壁</div>
+      <h3 class="term-title" id="termTitle"></h3>
+      <div class="term-block">
+        <span class="term-tag tag-metaphor">💡 一句话比喻</span>
+        <p id="termMetaphor"></p>
+      </div>
+      <div class="term-block">
+        <span class="term-tag tag-principle">🔬 微观真原理</span>
+        <p id="termPrinciple"></p>
+      </div>
+      <div class="term-block">
+        <span class="term-tag tag-exam">🎯 考试降维妙用</span>
+        <p id="termExamTip"></p>
+      </div>
+    </div>
+  </div>
+
+  <!-- 数据先行（卡带注册表），引擎最后加载 -->
+  <script src="data/ch1_water.js"></script>
+  <script src="data/ch2_5_grade8_core.js"></script>
+  <script src="data/ch2_oxygen_carbon.js"></script>
+  <script src="data/ch3_metals.js"></script>
+  <script src="data/ch4_acids_bases_salts.js"></script>
+  <script src="data/glossary_extensions.js"></script>
+  <script src="engine.js"></script>
+</body>
+</html>
