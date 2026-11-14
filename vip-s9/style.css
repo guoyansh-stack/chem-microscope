@@ -900,7 +900,7 @@ body {
 }
 
 .term-block {
-  margin-top: 12px;
+  margin-top: 14px;
   padding: 12px 14px;
   border-radius: 12px;
   background: rgba(255, 255, 255, 0.04);
@@ -910,7 +910,8 @@ body {
 .term-block p {
   margin: 8px 0 0;
   font-size: 13.5px;
-  line-height: 1.85;
+  line-height: 1.65;
+  white-space: pre-line;
   color: var(--text);
 }
 
