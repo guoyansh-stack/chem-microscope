@@ -281,8 +281,8 @@ var extensions = globalThis.CHEM_EXTENSIONS;
 if (!Array.isArray(glossary) || glossary.length === 0) {
   fail('未加载到 CHEM_GLOSSARY（data/glossary_extensions.js 未挂载词典）');
 } else {
-  if (glossary.length < 10) {
-    fail('CHEM_GLOSSARY 词条数 ' + glossary.length + ' < 10（S8 要求至少 10 条核心高阶术语）');
+  if (glossary.length < 15) {
+    fail('CHEM_GLOSSARY 词条数 ' + glossary.length + ' < 15（S10 要求至少 15 条初升高物理化学术语）');
   }
   var seenTermIds = {};
   var seenKeywords = {};
@@ -314,7 +314,7 @@ if (!extensions || typeof extensions !== 'object') {
     var ex = extensions[c.id];
     var ew = '拓展阅读 ' + c.id;
     if (!ex) {
-      fail(ew + '：缺少本反应的深度拓展阅读（S8 要求 18 篇全覆盖）');
+      fail(ew + '：缺少本反应的深度拓展阅读（S10 要求 22 篇全覆盖）');
       return;
     }
     if (!isNonEmptyStr(ex.title)) fail(ew + '：title 不能为空');
@@ -339,10 +339,10 @@ if (!extensions || typeof extensions !== 'object') {
 /* 4. 全局总量与章节覆盖                                                   */
 /* ---------------------------------------------------------------------- */
 
-if (carts.length !== 18) {
-  fail('卡带总数 ' + carts.length + ' ≠ 18（S7 验收口径：S1~S4 共 14 + S7 新增 4 大必考）');
+if (carts.length !== 22) {
+  fail('卡带总数 ' + carts.length + ' ≠ 22（S10 验收口径：S1~S4 共 14 + S7 新增 4 大必考 + S10 新增 4 张高中跃迁）');
 }
-['g8u1', 'g8u2', 'g8u3', 'g9e1', 'g9e2'].forEach(function (ch) {
+['g8u1', 'g8u2', 'g8u3', 'g9e1', 'g9e2', 'g9leap'].forEach(function (ch) {
   var n = carts.filter(function (c) { return c.chapter && c.chapter.id === ch; }).length;
   if (n === 0) fail('章节 ' + ch + ' 没有任何卡带');
 });
@@ -375,7 +375,7 @@ function finish() {
     console.log('\nRESULT: FAIL');
     process.exit(1);
   } else {
-    console.log('\nRESULT: VALID（18 张卡带坐标 / 时序 / 色标注册表 / 解说完整性 + S8 词典与拓展阅读全部通过）');
+    console.log('\nRESULT: VALID（22 张卡带坐标 / 时序 / 色标注册表 / 解说完整性 + S10 词典 15 条与拓展阅读 22 篇全部通过）');
     process.exit(0);
   }
 }

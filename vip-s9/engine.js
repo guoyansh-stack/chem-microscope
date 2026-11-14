@@ -2556,6 +2556,372 @@
     }
   }
 
+  /* ---------------- L1 新增场景（S10 · 九年级/高中跃迁）：原电池 / 合成塔 / 氯水漂白 / 铜氨络合 ---------------- */
+
+  /** 铜锌原电池：烧杯 + 双电极 + 导线电流表 + 铜层析出 */
+  function drawMacroZnCuCell(m, t, time) {
+    var baseY = viewH * 0.82;
+    drawBench(baseY);
+
+    var cx = viewW * 0.46, beakerW = 330, beakerH = 210;
+    var beakerY = baseY - beakerH - 14;
+    drawBeaker(cx, beakerY, beakerW, beakerH, 0.72, 'rgba(70,130,220,0.40)');
+
+    // 双电极（左 Zn 银白片逐渐溶解，右 Cu 片析出红铜）
+    var dissolveK = windowT(t, 0.30, 0.92);
+    var copperK = windowT(t, 0.36, 0.88);
+    var znX = cx - beakerW * 0.28, cuX = cx + beakerW * 0.28;
+    var plateTop = beakerY - 22;
+
+    // Zn 片
+    var znH = 152 - dissolveK * 26;
+    var znG = ctx.createLinearGradient(znX - 13, 0, znX + 13, 0);
+    znG.addColorStop(0, '#9aa7b5');
+    znG.addColorStop(0.5, '#d5dee6');
+    znG.addColorStop(1, '#7d8b99');
+    ctx.fillStyle = znG;
+    roundRectPath(znX - 13, plateTop, 26, znH, 6);
+    ctx.fill();
+    drawText('Zn 片（负极）', znX, plateTop - 14, 12, '#d5dee6', 'center', 0.95);
+
+    // Cu 片 + 红亮铜镀层
+    var cuH = 152;
+    var cuG = ctx.createLinearGradient(cuX - 13, 0, cuX + 13, 0);
+    cuG.addColorStop(0, '#c2704e');
+    cuG.addColorStop(0.5, '#e8a58a');
+    cuG.addColorStop(1, '#a0563a');
+    ctx.fillStyle = cuG;
+    roundRectPath(cuX - 13, plateTop, 26, cuH, 6);
+    ctx.fill();
+    if (copperK > 0.05) {
+      ctx.save();
+      ctx.globalAlpha = 0.35 + copperK * 0.6;
+      ctx.fillStyle = '#e07a4e';
+      roundRectPath(cuX - 17, plateTop + 24, 34, cuH - 40, 8);
+      ctx.fill();
+      ctx.restore();
+    }
+    drawText('Cu 片（正极）', cuX, plateTop - 14, 12, '#e8a58a', 'center', 0.95);
+
+    // 导线 + 电流表（指针随 t 偏转）
+    var gaugeX = cx, gaugeY = beakerY - 104;
+    ctx.save();
+    ctx.strokeStyle = '#cfd8dc';
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.moveTo(znX, plateTop);
+    ctx.lineTo(znX, gaugeY);
+    ctx.lineTo(gaugeX - 36, gaugeY);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(gaugeX + 36, gaugeY);
+    ctx.lineTo(cuX, gaugeY);
+    ctx.lineTo(cuX, plateTop);
+    ctx.stroke();
+    ctx.restore();
+
+    // 电流表表盘
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(gaugeX, gaugeY, 36, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(20,32,54,0.92)';
+    ctx.fill();
+    ctx.strokeStyle = '#8fa3c8';
+    ctx.lineWidth = 3;
+    ctx.stroke();
+    // 指针（-2.2rad → -0.7rad）
+    var defl = windowT(t, 0.20, 0.58);
+    var ang = -2.2 + defl * 1.5 + Math.sin(time * 2.2) * 0.03 * defl;
+    ctx.strokeStyle = '#ffd54f';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(gaugeX, gaugeY);
+    ctx.lineTo(gaugeX + Math.cos(ang) * 26, gaugeY + Math.sin(ang) * 26);
+    ctx.stroke();
+    ctx.restore();
+    drawText('电流表', gaugeX, gaugeY + 52, 12, '#ffd54f', 'center', 0.8 + defl * 0.2);
+
+    // 导线上流动的电子（金点）
+    var flow = windowT(t, 0.22, 1.0);
+    if (flow > 0.05) {
+      for (var i = 0; i < 4; i++) {
+        var phase = (time * 0.35 + i / 4) % 1;
+        var ex, ey;
+        if (phase < 0.5) {
+          var k1 = phase * 2;
+          ex = lerp(znX, gaugeX - 36, k1);
+          ey = lerp(plateTop, gaugeY, k1);
+        } else {
+          var k2 = (phase - 0.5) * 2;
+          ex = lerp(gaugeX + 36, cuX, k2);
+          ey = lerp(gaugeY, plateTop, k2);
+        }
+        ctx.save();
+        ctx.globalAlpha = 0.35 + flow * 0.6;
+        ctx.fillStyle = '#ffd54f';
+        ctx.beginPath();
+        ctx.arc(ex, ey, 4.2, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+    }
+
+    drawText('e⁻ 经外电路定向迁移（空间解耦）', cx, gaugeY - 52, 12, '#9fd8ff', 'center', 0.55 + defl * 0.45);
+    drawPill(cx, gaugeY - 82, '条件：' + (m.conditions || '导线连通 · 常温'), '#ffe082', 0.95);
+    drawPill(cx, baseY + 26, m.vesselLabel || 'Zn 片 | CuSO₄ 溶液 | Cu 片', '#90caf9', 0.9);
+    if (copperK > 0.4) {
+      drawPill(cx, baseY + 58, m.productLabel || '电流偏转 + 铜片增厚', '#e8a58a', 0.85 + copperK * 0.15);
+    }
+  }
+
+  /** 合成氨：高压合成塔 + 铁触媒床层 + 温压仪表 + 进出料 */
+  function drawMacroN2H2Nh3(m, t, time) {
+    var baseY = viewH * 0.82;
+    drawBench(baseY);
+
+    // 合成塔（竖式圆筒）
+    var towerX = viewW * 0.44, towerW = 130, towerH = 300;
+    var towerY = baseY - towerH - 10;
+    var tg = ctx.createLinearGradient(towerX - towerW / 2, 0, towerX + towerW / 2, 0);
+    tg.addColorStop(0, 'rgba(120,150,190,0.30)');
+    tg.addColorStop(0.5, 'rgba(170,200,235,0.18)');
+    tg.addColorStop(1, 'rgba(120,150,190,0.30)');
+    ctx.fillStyle = tg;
+    roundRectPath(towerX - towerW / 2, towerY, towerW, towerH, 22);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(185,215,255,0.55)';
+    ctx.lineWidth = 3;
+    ctx.stroke();
+
+    // 铁触媒床层（中部颗粒带，随 t 泛活性光泽）
+    var bedY = towerY + towerH * 0.42, bedH = 62;
+    var activeK = windowT(t, 0.22, 0.50);
+    ctx.save();
+    ctx.globalAlpha = 0.35 + activeK * 0.45;
+    ctx.fillStyle = '#5d4037';
+    roundRectPath(towerX - towerW / 2 + 12, bedY, towerW - 24, bedH, 12);
+    ctx.fill();
+    ctx.restore();
+    for (var i = 0; i < 12; i++) {
+      var px = towerX - towerW / 2 + 22 + (i % 6) * ((towerW - 44) / 5);
+      var py = bedY + 16 + Math.floor(i / 6) * 28;
+      var glow = 0.25 + activeK * 0.75 * (0.6 + 0.4 * Math.sin(time * 3 + i));
+      ctx.save();
+      ctx.globalAlpha = glow;
+      var gg = ctx.createRadialGradient(px, py, 1, px, py, 9);
+      gg.addColorStop(0, '#ffcc80');
+      gg.addColorStop(1, 'rgba(255,170,80,0.1)');
+      ctx.fillStyle = gg;
+      ctx.beginPath();
+      ctx.arc(px, py, 9, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+    drawText('铁触媒床层（Fe）', towerX, bedY - 16, 12, '#ffcc80', 'center', 0.85 + activeK * 0.15);
+
+    // 进料箭头（左）与出料箭头（右）
+    var flowK = windowT(t, 0.06, 0.30);
+    ctx.save();
+    ctx.globalAlpha = 0.35 + flowK * 0.55;
+    ctx.strokeStyle = '#b7e9ff';
+    ctx.lineWidth = 5;
+    ctx.beginPath();
+    ctx.moveTo(towerX - towerW / 2 - 96, towerY + towerH * 0.28);
+    ctx.lineTo(towerX - towerW / 2 + 2, towerY + towerH * 0.28);
+    ctx.stroke();
+    ctx.fillStyle = '#b7e9ff';
+    ctx.beginPath();
+    ctx.moveTo(towerX - towerW / 2 + 2, towerY + towerH * 0.28);
+    ctx.lineTo(towerX - towerW / 2 - 14, towerY + towerH * 0.28 - 10);
+    ctx.lineTo(towerX - towerW / 2 - 14, towerY + towerH * 0.28 + 10);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+    drawText('N₂ + H₂ 进料', towerX - towerW / 2 - 52, towerY + towerH * 0.28 - 24, 12, '#9fd8ff', 'center', 0.9);
+
+    var outK = windowT(t, 0.50, 0.80);
+    ctx.save();
+    ctx.globalAlpha = 0.30 + outK * 0.6;
+    ctx.strokeStyle = '#ce93d8';
+    ctx.lineWidth = 5;
+    ctx.beginPath();
+    ctx.moveTo(towerX + towerW / 2 - 2, towerY + towerH * 0.72);
+    ctx.lineTo(towerX + towerW / 2 + 96, towerY + towerH * 0.72);
+    ctx.stroke();
+    ctx.fillStyle = '#ce93d8';
+    ctx.beginPath();
+    ctx.moveTo(towerX + towerW / 2 + 96, towerY + towerH * 0.72);
+    ctx.lineTo(towerX + towerW / 2 + 80, towerY + towerH * 0.72 - 10);
+    ctx.lineTo(towerX + towerW / 2 + 80, towerY + towerH * 0.72 + 10);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+    drawText('NH₃ 出料（液化分离）', towerX + towerW / 2 + 44, towerY + towerH * 0.72 + 28, 12, '#e1bee7', 'center', 0.55 + outK * 0.45);
+
+    // 温度计（450°C 恒温）与压力表
+    drawThermometer(viewW * 0.72, viewH * 0.20, viewH * 0.46, windowT(t, 0.14, 0.42));
+    drawText('450°C', viewW * 0.72, viewH * 0.20 - 34, 13, '#ffb3b3', 'center', 0.95);
+
+    var gaugeX = viewW * 0.20, gaugeY = viewH * 0.30;
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(gaugeX, gaugeY, 40, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(20,32,54,0.9)';
+    ctx.fill();
+    ctx.strokeStyle = '#8fa3c8';
+    ctx.lineWidth = 3;
+    ctx.stroke();
+    var pang = -2.3 + windowT(t, 0.10, 0.40) * 1.4;
+    ctx.strokeStyle = '#7fd4ff';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(gaugeX, gaugeY);
+    ctx.lineTo(gaugeX + Math.cos(pang) * 30, gaugeY + Math.sin(pang) * 30);
+    ctx.stroke();
+    ctx.restore();
+    drawText('压力 15~30 MPa', gaugeX, gaugeY + 60, 12, '#7fd4ff', 'center', 0.9);
+
+    // 平衡达成：⇌ 徽标
+    var eqK = windowT(t, 0.78, 0.96);
+    if (eqK > 0.03) {
+      drawText('正反应 ⇌ 逆反应（速率相等）', viewW * 0.5, viewH * 0.12, 14, '#c5e1a5', 'center', eqK);
+    }
+
+    drawPill(towerX, towerY - 30, '条件：' + (m.conditions || '铁触媒 · 高温高压'), '#ffb74d', 0.95);
+    drawPill(towerX, baseY + 26, m.vesselLabel || 'N₂ + H₂ 进料', '#90caf9', 0.9);
+    if (outK > 0.4) {
+      drawPill(towerX, baseY + 58, m.productLabel || 'NH₃（液化分离）', '#e1bee7', 0.85 + outK * 0.15);
+    }
+  }
+
+  /** 氯水歧化：黄绿色氯水 + 有色布条褪色 + 可逆警示 */
+  function drawMacroCl2H2oDisprop(m, t, time) {
+    var baseY = viewH * 0.82;
+    drawBench(baseY);
+
+    var cx = viewW * 0.42, beakerW = 260, beakerH = 225;
+    var beakerY = baseY - beakerH - 14;
+
+    // 氯水（浅黄绿色，随稀释略变浅）
+    var fadeK = windowT(t, 0.40, 0.92);
+    var lr = Math.round(150 - 40 * fadeK), lg = Math.round(190 - 20 * fadeK), lb = Math.round(90 + 30 * fadeK);
+    drawBeaker(cx, beakerY, beakerW, beakerH, 0.68, 'rgba(' + lr + ',' + lg + ',' + lb + ',0.40)');
+
+    // 瓶内黄绿色气体氛围
+    ctx.save();
+    ctx.globalAlpha = 0.12 + 0.10 * (1 - fadeK);
+    ctx.fillStyle = '#c6e27a';
+    roundRectPath(cx - beakerW / 2 + 10, beakerY + 10, beakerW - 20, beakerH * 0.30, 12);
+    ctx.fill();
+    ctx.restore();
+
+    // 悬挂的有色布条（红 → 褪成灰白）
+    var bleachK = windowT(t, 0.34, 0.72);
+    var clothX = cx + 8, clothTop = beakerY - 34, clothH = 150;
+    // 吊线
+    ctx.save();
+    ctx.strokeStyle = '#8fa3c8';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(clothX, clothTop - 34);
+    ctx.lineTo(clothX, clothTop);
+    ctx.stroke();
+    ctx.restore();
+    var cr = Math.round(214 - 120 * bleachK), cg = Math.round(70 + 130 * bleachK), cb = Math.round(80 + 120 * bleachK);
+    ctx.fillStyle = 'rgb(' + cr + ',' + cg + ',' + cb + ')';
+    roundRectPath(clothX - 18, clothTop, 36, clothH, 8);
+    ctx.fill();
+    drawText('有色布条', clothX + 30, clothTop + 22, 11, '#e8eef7', 'left', 0.85);
+    if (bleachK > 0.3) {
+      drawText('被 HClO 氧化褪色', clothX + 30, clothTop + 42, 11, '#fff59d', 'left', bleachK);
+    }
+
+    // 反应式标注
+    drawText('Cl₂ + H₂O  ⇌  HCl + HClO', cx, beakerY - 60, 13, '#c6e27a', 'center', 0.95);
+    drawText('0 价 Cl：升 +1（HClO）· 降 -1（HCl）', cx, beakerY + beakerH + 30, 12, '#80cbc4', 'center', 0.9);
+
+    // 警示：84 + 酸 → Cl₂
+    var warnK = windowT(t, 0.80, 0.97);
+    if (warnK > 0.03) {
+      drawText('⚠ 84 消毒液 + 酸性清洁剂 → 归中放出剧毒 Cl₂↑', viewW * 0.5, viewH * 0.12, 13, '#f48fb1', 'center', warnK);
+    }
+
+    drawPill(cx, beakerY - 92, '条件：' + (m.conditions || '常温 · 溶于水'), '#ffe082', 0.95);
+    drawPill(cx, baseY + 58, m.vesselLabel || 'Cl₂ + 水', '#90caf9', 0.9);
+    drawPill(viewW * 0.80, baseY - 110, m.productLabel || '氯水（HCl + HClO）', '#c6e27a', 0.82 + bleachK * 0.18);
+  }
+
+  /** 铜氨配位：浅蓝沉淀生成再溶解，溶液变深邃宝石蓝 */
+  function drawMacroCuNh3Complex(m, t, time) {
+    var baseY = viewH * 0.82;
+    drawBench(baseY);
+
+    var cx = viewW * 0.42, beakerW = 250, beakerH = 225;
+    var beakerY = baseY - beakerH - 14;
+
+    // 溶液颜色：浅蓝 → 深宝石蓝
+    var deepK = windowT(t, 0.50, 0.86);
+    var lr = Math.round(90 - 55 * deepK), lg = Math.round(150 - 95 * deepK), lb = Math.round(225 - 25 * deepK);
+    drawBeaker(cx, beakerY, beakerW, beakerH, 0.66, 'rgba(' + lr + ',' + lg + ',' + lb + ',' + (0.38 + deepK * 0.22) + ')');
+
+    // 氨水滴管（右上方，周期性捏合）
+    var dropK = windowT(t, 0.14, 0.46);
+    drawDropper(cx + 96, beakerY - 6, 0.25 + 0.35 * Math.abs(Math.sin(time * 1.3)), 'rgba(170,215,245,0.9)');
+    drawText('氨水 NH₃·H₂O', cx + 96, beakerY - 122, 12, '#9fd8ff', 'center', 0.55 + dropK * 0.45);
+
+    // 浅蓝色絮状沉淀：先出现后溶解
+    var precipK = windowT(t, 0.26, 0.42) * (1 - windowT(t, 0.54, 0.76));
+    if (precipK > 0.02) {
+      drawPrecipitate(cx, beakerY + beakerH - 14, beakerW - 56, precipK, '#90caf9', true, time);
+      drawText('浅蓝色沉淀 Cu(OH)₂', cx, beakerY + beakerH + 30, 12, '#90caf9', 'center', precipK);
+    }
+
+    // 沉淀溶解后的深蓝标注
+    if (deepK > 0.25) {
+      drawText('沉淀溶解 → 深邃宝石蓝 [Cu(NH₃)₄]²⁺', cx, beakerY + beakerH + 30, 12, '#7e57c2', 'center', deepK);
+    }
+
+    // 配位键意象：四颗卫星氮原子环绕铜离子
+    var coordK = windowT(t, 0.55, 0.85);
+    if (coordK > 0.05) {
+      var gx = viewW * 0.80, gy = viewH * 0.36;
+      ctx.save();
+      ctx.globalAlpha = coordK * 0.9;
+      var cg = ctx.createRadialGradient(gx, gy, 2, gx, gy, 26);
+      cg.addColorStop(0, '#e8a58a');
+      cg.addColorStop(1, 'rgba(200,110,80,0.15)');
+      ctx.fillStyle = cg;
+      ctx.beginPath();
+      ctx.arc(gx, gy, 18, 0, Math.PI * 2);
+      ctx.fill();
+      for (var i = 0; i < 4; i++) {
+        var ang = time * 0.6 + i * Math.PI / 2;
+        var nx = gx + Math.cos(ang) * 52, ny = gy + Math.sin(ang) * 40;
+        ctx.strokeStyle = '#ce93d8';
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        ctx.moveTo(gx, gy);
+        ctx.lineTo(nx, ny);
+        ctx.stroke();
+        var ng = ctx.createRadialGradient(nx, ny, 1, nx, ny, 13);
+        ng.addColorStop(0, '#b3bdf5');
+        ng.addColorStop(1, 'rgba(120,130,200,0.2)');
+        ctx.fillStyle = ng;
+        ctx.beginPath();
+        ctx.arc(nx, ny, 11, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
+      drawText('配位键：N 孤对电子 → Cu²⁺ 空轨道', gx, gy + 78, 12, '#ce93d8', 'center', coordK);
+    }
+
+    drawPill(cx, beakerY - 92, '条件：' + (m.conditions || '常温 · 逐滴加氨水'), '#ffe082', 0.95);
+    drawPill(cx, baseY + 58, m.vesselLabel || 'CuSO₄ 溶液 + 氨水', '#90caf9', 0.9);
+    if (deepK > 0.4) {
+      drawPill(cx, baseY + 90, m.productLabel || '[Cu(NH₃)₄]²⁺（宝石蓝）', '#7e57c2', 0.85 + deepK * 0.15);
+    }
+  }
+
   // 场景注册表（卡带 macro.scene 选用）
   MACRO_SCENES.combustion = drawMacroCombustion;
   MACRO_SCENES.electrolysis = drawMacroElectrolysis;
@@ -2575,6 +2941,10 @@
   MACRO_SCENES.co2_h2o = drawMacroCo2H2o;
   MACRO_SCENES.co2_lime = drawMacroCo2Lime;
   MACRO_SCENES.c_co2 = drawMacroCCo2;
+  MACRO_SCENES.zn_cu_cell = drawMacroZnCuCell;
+  MACRO_SCENES.n2_h2_nh3 = drawMacroN2H2Nh3;
+  MACRO_SCENES.cl2_h2o_disprop = drawMacroCl2H2oDisprop;
+  MACRO_SCENES.cu_nh3_complex = drawMacroCuNh3Complex;
 
   /* ====================================================================== */
   /* 5. L2 分子动力学层                                                      */
