@@ -320,9 +320,14 @@ if (!extensions || typeof extensions !== 'object') {
     if (!isNonEmptyStr(ex.title)) fail(ew + '：title 不能为空');
     if (!isNonEmptyStr(ex.story)) fail(ew + '：story 不能为空');
     if (!isNonEmptyStr(ex.question)) fail(ew + '：question 不能为空');
+    if (isNonEmptyStr(ex.story)) {
+      ['【工程放大量级与核心工况】', '【微观机理的工程化制约】', '【跨学科前沿与系统工程映射】'].forEach(function (h) {
+        if (ex.story.indexOf(h) < 0) fail(ew + '：story 缺少三层拆解段落标题 ' + h);
+      });
+    }
     var n = isNonEmptyStr(ex.story) ? ex.story.replace(/\s/g, '').length : 0;
-    if (n > 0 && (n < 150 || n > 250)) {
-      fail(ew + '：story 字数 ' + n + ' 不在 150~250 区间');
+    if (n > 0 && (n < 300 || n > 600)) {
+      fail(ew + '：story 字数 ' + n + ' 不在 300~600 区间（S9.2 硬核工程扩写口径）');
     }
   });
   Object.keys(extensions).forEach(function (k) {
