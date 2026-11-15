@@ -659,6 +659,133 @@ body {
   margin: 0;
 }
 
+/* ---------------------------------------------- S12：🔬 PES 势能面示波器卡片 */
+.pes-card {
+  background:
+    linear-gradient(165deg, rgba(57, 230, 195, 0.10), rgba(255, 176, 32, 0.05)),
+    var(--panel);
+  border: 1px solid rgba(57, 230, 195, 0.22);
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.pes-card.pes-flash {
+  animation: pesFlash 1.15s ease;
+}
+
+@keyframes pesFlash {
+  0%, 100% {
+    border-color: rgba(57, 230, 195, 0.22);
+    box-shadow: none;
+  }
+  22%, 62% {
+    border-color: rgba(57, 230, 195, 0.85);
+    box-shadow: 0 0 24px rgba(57, 230, 195, 0.5);
+  }
+}
+
+.pes-title {
+  font-size: 15px;
+}
+
+.pes-hint {
+  margin-left: auto;
+  padding: 2px 9px;
+  font-size: 10.5px;
+  font-weight: 700;
+  color: #39e6c3;
+  border: 1px solid rgba(57, 230, 195, 0.4);
+  border-radius: 999px;
+  background: rgba(57, 230, 195, 0.1);
+  white-space: nowrap;
+}
+
+/* 参数徽章行：ΔH / Ea / Ea(催化) 大字号高对比 */
+.pes-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 2px 0 10px;
+}
+
+.pes-badge {
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.35;
+  padding: 4px 10px;
+  border-radius: 8px;
+  white-space: nowrap;
+}
+
+.pes-badge.dh-neg {
+  color: #39e6c3;
+  background: rgba(57, 230, 195, 0.12);
+  border: 1px solid rgba(57, 230, 195, 0.38);
+}
+
+.pes-badge.dh-pos {
+  color: #ffb74d;
+  background: rgba(255, 183, 77, 0.12);
+  border: 1px solid rgba(255, 183, 77, 0.4);
+}
+
+.pes-badge.ea {
+  color: #b7e9ff;
+  background: rgba(127, 212, 255, 0.1);
+  border: 1px solid rgba(127, 212, 255, 0.32);
+}
+
+.pes-badge.cat {
+  color: #ffd54f;
+  background: rgba(255, 213, 79, 0.12);
+  border: 1px solid rgba(255, 213, 79, 0.4);
+}
+
+.pes-badge.inferred {
+  color: #8fa3c8;
+  background: rgba(143, 163, 200, 0.1);
+  border: 1px dashed rgba(143, 163, 200, 0.35);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+/* 高分辨率示波器画布容器（175~190px 高，宽度撑满卡片） */
+.pes-canvas-wrap {
+  width: 100%;
+  height: 182px;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #0a1322;
+  border: 1px solid rgba(127, 212, 255, 0.18);
+  box-shadow: inset 0 0 18px rgba(0, 0, 0, 0.45);
+}
+
+#pes-canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* 底部实时动力学状态栏 */
+.pes-stage {
+  margin-top: 10px;
+  padding: 7px 11px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.5;
+  color: #8fa3c8;
+  background: rgba(127, 212, 255, 0.07);
+  border: 1px solid rgba(127, 212, 255, 0.16);
+  min-height: 22px;
+}
+
+.pes-stage.ts {
+  color: #ffd54f;
+  background: rgba(255, 213, 79, 0.1);
+  border-color: rgba(255, 213, 79, 0.38);
+  box-shadow: 0 0 12px rgba(255, 213, 79, 0.18);
+}
+
 /* ------------------------------------------------------------------ 时间轴 */
 
 .timeline-panel {
@@ -1301,6 +1428,13 @@ body {
   .content > .main > .panel { order: 1; }
   .timeline-panel { order: 2; margin-top: 0; padding: 10px 12px 12px; }
   .side { order: 3; gap: 10px; }
+
+  /* S12：PES 示波器卡片窄屏紧凑展示 */
+  .pes-canvas-wrap { height: 150px; }
+  .pes-badge { font-size: 12px; padding: 3px 8px; }
+  .pes-badge.inferred { font-size: 10px; }
+  .pes-stage { font-size: 12.5px; margin-top: 8px; padding: 6px 9px; }
+  .pes-hint { font-size: 9.5px; padding: 1px 7px; }
   .ext-panel { order: 4; margin-top: 0; }
   .footer { order: 5; }
 

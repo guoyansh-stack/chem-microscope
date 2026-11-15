@@ -6,7 +6,7 @@
   <meta name="robots" content="noindex,nofollow" />
   <title>初中化学 · 宏微观三层穿透显微镜</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%2312203a'/%3E%3Ccircle cx='32' cy='30' r='12' fill='%23ff6b6b'/%3E%3Ccircle cx='18' cy='44' r='7' fill='%237fd4ff'/%3E%3Ccircle cx='46' cy='44' r='7' fill='%237fd4ff'/%3E%3C/svg%3E" />
-  <link rel="stylesheet" href="style.css?v=11.0" />
+  <link rel="stylesheet" href="style.css?v=12.0" />
   <!-- VIP-S9 私享暗门：防爬 + 轻量口令锁（口令经编码比对，不含明文） -->
   <style>
     html.vip-pending .app { display: none !important; }
@@ -214,17 +214,17 @@
               </ul>
             </section>
 
-            <section class="panel card">
-              <h2><span class="dot" style="background:#b39ddb;box-shadow:0 0 10px #b39ddb"></span>怎么玩</h2>
-              <p class="tip">
-                1️⃣ 点左侧目录栏，按章节选择一个化学反应（可折叠目录栏）。<br />
-                2️⃣ 点 L1 / L2 / L3，切换空间尺度。<br />
-                3️⃣ 拖动底部时间轴推杆（或点「▶ 自动播放」约 10 秒匀速推演；点下方 4 个阶段标签可一键跳段），
-                三个尺度的画
-                面和右边解说会<span style="color:#ffd54f">实时同步演变</span>。<br />
-                4️⃣ 对比「共价键（水）」与「离子键（镁燃烧）」，看懂电子的“共用”与“得失”！
-                5️⃣ 开启「🎯 聚焦反应实质」，旁观离子变淡，一眼锁定真正成键/断键的主角！
-              </p>
+            <section class="panel card pes-card" id="pes-card">
+              <h2 class="pes-title">
+                <span class="dot" style="background:#39e6c3;box-shadow:0 0 10px #39e6c3"></span>
+                反应势能面与动力学 (PES)
+                <span class="pes-hint" title="快捷键 E 高亮/闪烁聚焦该面板；顶部「📈 势能曲线」按钮可平滑滚动至此卡片">快捷键 E</span>
+              </h2>
+              <div id="pes-card-meta" class="pes-meta"></div>
+              <div class="pes-canvas-wrap">
+                <canvas id="pes-canvas" aria-label="反应势能面与活化能示波器"></canvas>
+              </div>
+              <div id="pes-card-stage" class="pes-stage"></div>
             </section>
           </aside>
         </div>
@@ -287,8 +287,8 @@
         </section>
 
         <footer class="footer">
-          Rock Lab 认知实验室 · S11 反应势能面与动力学满配版 · 纯 HTML5 Canvas 零依赖 · 双击即用<br />
-          架构：engine.js 五层防遮挡引擎 + 22 张标准反应卡带（含高中电化学/平衡/配位） + 15 项物理化学显微镜 + 22 篇现代工程拓展
+          Rock Lab 认知实验室 · S12 定量化学计量与势能面满配版（26卡带） · 纯 HTML5 Canvas 零依赖 · 双击即用<br />
+          架构：engine.js 五层防遮挡引擎 + 26 张标准反应卡带（含高中电化学/平衡/配位与定量专训） + 18 项物理化学显微镜 + 26 篇现代工程拓展
         </footer>
       </div>
     </div>
@@ -320,13 +320,14 @@
   </div>
 
   <!-- 数据先行（卡带注册表），引擎最后加载 -->
-  <script src="data/ch1_water.js?v=11.0"></script>
-  <script src="data/ch2_5_grade8_core.js?v=11.0"></script>
-  <script src="data/ch2_oxygen_carbon.js?v=11.0"></script>
-  <script src="data/ch3_metals.js?v=11.0"></script>
-  <script src="data/ch4_acids_bases_salts.js?v=11.0"></script>
-  <script src="data/ch5_highschool_leap.js?v=11.0"></script>
-  <script src="data/glossary_extensions.js?v=11.0"></script>
-  <script src="engine.js?v=11.0"></script>
+  <script src="data/ch1_water.js?v=12.0"></script>
+  <script src="data/ch2_5_grade8_core.js?v=12.0"></script>
+  <script src="data/ch2_oxygen_carbon.js?v=12.0"></script>
+  <script src="data/ch3_metals.js?v=12.0"></script>
+  <script src="data/ch4_acids_bases_salts.js?v=12.0"></script>
+  <script src="data/ch5_highschool_leap.js?v=12.0"></script>
+  <script src="data/ch6_stoichiometry_quant.js?v=12.0"></script>
+  <script src="data/glossary_extensions.js?v=12.0"></script>
+  <script src="engine.js?v=12.0"></script>
 </body>
 </html>

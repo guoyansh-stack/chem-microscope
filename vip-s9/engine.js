@@ -105,10 +105,8 @@
     clock: 0,             // 动画时钟（驱动热运动）
     focus: false,         // S6：聚焦反应实质（弱化旁观粒子），仅作用于 L2/L3
     typeFilter: 'all',    // S6：目录栏反应类型筛选胶囊（all/syn/dec/disp/dbl/mix/star）
-    starred: [],          // S9：⭐ 重点攻克星标收藏的反应卡带 id 列表
-    energyHud: true       // S11：📈 势能曲线 (E) HUD 示波器显隐（localStorage: chem_hud_energy）
+    starred: []           // S9：⭐ 重点攻克星标收藏的反应卡带 id 列表
   };
-
   function currentCartridge() {
     var list = window.CHEM_CARTRIDGES || [];
     for (var i = 0; i < list.length; i++) {
@@ -487,9 +485,6 @@
       drawPill(18, viewH - 92 - (ph.length - 1 - i) * 34,
         (a > 0.5 ? '✓ ' : '· ') + ph[i].label, '#b39ddb', 0.32 + a * 0.68, 'left');
     }
-
-    // S11 势能曲线 HUD（Layer 4.5：粒子之上、胶囊之下）
-    drawEnergyHUD(cartridge, t);
 
     // 全部胶囊置顶统一绘制
     flushPills();
@@ -2926,6 +2921,484 @@
     }
   }
 
+  /* ---------------- S12-Step2 新增场景：第6章 定量化学计量与分步反应 ---------------- */
+
+  /** 极限反应物：密闭量气管爆鸣实验（3 体积 H₂ + 1 体积 O₂ → 液面上升 + 1 体积过量 H₂ 残留） */
+  function drawMacroLimitingH2O2(m, t, time) {
+    var baseY = viewH * 0.88;
+    drawBench(baseY);
+
+    // ---- 水槽（液面基准） ----
+    var troughW = 340, troughH = 92;
+    var troughX = viewW * 0.32, troughY = baseY - troughH - 8;
+    drawBeaker(troughX - troughW / 2, troughY, troughW, troughH, 0.78, 'rgba(80,165,220,0.30)');
+    drawText('水槽', troughX, troughY + troughH + 18, 11, '#9fd8ff', 'center', 0.8);
+
+    // ---- 倒置量气管（管顶封闭 · 管口没入水中） ----
+    var tubeW = 92, tubeH = 330;
+    var tubeX = troughX;
+    var tubeTop = troughY - tubeH + 52;
+    var tubeBottom = troughY + 42;
+
+    ctx.save();
+    roundRectPath(tubeX - tubeW / 2, tubeTop, tubeW, tubeBottom - tubeTop, 18);
+    var glass = ctx.createLinearGradient(tubeX - tubeW / 2, tubeTop, tubeX + tubeW / 2, tubeBottom);
+    glass.addColorStop(0, 'rgba(150,190,230,0.16)');
+    glass.addColorStop(1, 'rgba(150,190,230,0.08)');
+    ctx.fillStyle = glass;
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(185,215,255,0.60)';
+    ctx.lineWidth = 3;
+    ctx.stroke();
+    ctx.restore();
+
+    // 气体体积：4 → 1（消耗 2H₂+O₂ 共 3 体积）
+    var burnK = windowT(t, 0.34, 0.82);
+    var gasH = (tubeBottom - tubeTop - 26) * (1 - burnK * 0.72);
+    var gasY = tubeTop + 12;
+    var liquidY = gasY + gasH;
+
+    // 气柱（H₂ 淡蓝 / O₂ 淡青的混合意象）
+    ctx.save();
+    ctx.globalAlpha = 0.22 + 0.10 * (1 - burnK);
+    ctx.fillStyle = '#9fd8ff';
+    roundRectPath(tubeX - tubeW / 2 + 8, gasY, tubeW - 16, gasH, 12);
+    ctx.fill();
+    ctx.restore();
+
+    // 液柱（水）
+    ctx.save();
+    ctx.globalAlpha = 0.34;
+    ctx.fillStyle = '#4fa3d8';
+    roundRectPath(tubeX - tubeW / 2 + 8, liquidY, tubeW - 16, Math.max(6, tubeBottom - liquidY - 8), 10);
+    ctx.fill();
+    ctx.restore();
+
+    // 液面线
+    ctx.save();
+    ctx.strokeStyle = 'rgba(220,245,255,0.85)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(tubeX - tubeW / 2 + 8, liquidY);
+    ctx.lineTo(tubeX + tubeW / 2 - 8, liquidY);
+    ctx.stroke();
+    ctx.restore();
+
+    // 定量刻度标尺（管右侧，0~4 体积）
+    var scaleBaseY = tubeBottom - 16;
+    var scaleTopY = tubeTop + 16;
+    var unit = (scaleBaseY - scaleTopY) / 4;
+    for (var v = 0; v <= 4; v++) {
+      var sy = scaleBaseY - v * unit;
+      ctx.save();
+      ctx.strokeStyle = 'rgba(255,224,130,0.72)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(tubeX + tubeW / 2 + 8, sy);
+      ctx.lineTo(tubeX + tubeW / 2 + (v % 2 === 0 ? 26 : 17), sy);
+      ctx.stroke();
+      ctx.restore();
+      drawText(v + ' 体积', tubeX + tubeW / 2 + 32, sy, 11, '#ffe082', 'left', 0.85);
+    }
+
+    // 当前体积指针（读数 4.0 → 1.0）
+    var curVol = 4 - 3 * burnK;
+    var curY = scaleBaseY - curVol * unit;
+    ctx.save();
+    ctx.fillStyle = '#ff8a80';
+    ctx.beginPath();
+    ctx.moveTo(tubeX + tubeW / 2 - 4, curY);
+    ctx.lineTo(tubeX + tubeW / 2 - 16, curY - 7);
+    ctx.lineTo(tubeX + tubeW / 2 - 16, curY + 7);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+    drawText('V = ' + curVol.toFixed(1) + ' 体积', tubeX - tubeW / 2 - 16, curY, 13, '#ffd9a0', 'right', 0.95);
+
+    // 点火爆鸣闪光
+    var flashK = windowT(t, 0.26, 0.34) * (1 - windowT(t, 0.42, 0.54));
+    if (flashK > 0.02) {
+      drawStarburst(tubeX, gasY + gasH * 0.45, 120 + 18 * Math.sin(time * 5), flashK * 0.9, time, '#fff3c4');
+      drawSparks(tubeX, gasY + gasH * 0.45, flashK, time);
+      drawText('爆鸣 · 点火引爆', tubeX, tubeTop - 22, 13, '#ffd54f', 'center', flashK);
+    }
+
+    drawPill(troughX, tubeTop - 46, '条件：' + (m.conditions || '密闭量气管 · 点火引爆'), '#ffe082', 0.95);
+    drawPill(troughX, baseY + 26, m.vesselLabel || '3 体积 H₂ + 1 体积 O₂', '#90caf9', 0.9);
+    if (burnK > 0.55) {
+      drawPill(viewW * 0.80, viewH * 0.30, m.productLabel || '残留 1 体积无色 H₂', '#b7e9ff', 0.9);
+      drawPill(viewW * 0.80, viewH * 0.30 + 34, '过量 H₂ 残留 · 不计入生成物', '#ffd54f', 0.88);
+    }
+  }
+
+  /** 变价铁氧化剂博弈：左 Fe+稀盐酸（浅绿 Fe²⁺） vs 右 Fe+Cl₂（棕黄 Fe³⁺） */
+  function drawMacroFeOxidantGame(m, t, time) {
+    var baseY = viewH * 0.86;
+    drawBench(baseY);
+
+    // ===== 左：铁粉 + 稀盐酸 → 缓慢冒泡 · 浅绿色 Fe²⁺ =====
+    var lx = viewW * 0.22;
+    var tubeYBottom = baseY - 12;
+    var greenK = windowT(t, 0.30, 0.86);
+    var lr = Math.round(150 - 30 * greenK), lg = Math.round(200 + 8 * greenK), lb = Math.round(235 - 90 * greenK);
+    drawTestTube(lx, tubeYBottom, 94, 242, 0.52,
+      'rgba(' + lr + ',' + lg + ',' + lb + ',' + (0.30 + greenK * 0.26) + ')');
+
+    // 铁粉（底部堆积）
+    drawPowderFall(lx, tubeYBottom - 156, 46, 10, 0.55, time, '#3a4148');
+    // 缓慢气泡
+    var bubK = windowT(t, 0.16, 0.52) * 0.55;
+    if (bubK > 0.01) {
+      drawBubbles(lx - 14, tubeYBottom - 152, tubeYBottom - 28, bubK, time, 3);
+      drawBubbles(lx + 13, tubeYBottom - 132, tubeYBottom - 28, bubK * 0.8, time, 6);
+    }
+    drawText('弱氧化剂 H⁺（稀盐酸）', lx, tubeYBottom - 292, 13, '#b7e9ff', 'center', 0.95);
+    if (greenK > 0.3) {
+      drawText('溶液渐呈浅绿色（Fe²⁺）', lx, tubeYBottom - 268, 12, '#8fd48a', 'center', greenK);
+    }
+    drawText('Fe + 2H⁺ → Fe²⁺ + H₂↑（只失 2e⁻）', lx, tubeYBottom + 28, 11, '#b9e4a8', 'center', 0.75 + greenK * 0.25);
+
+    // ===== 右：炽热铁丝在 Cl₂ 中燃烧 → 棕褐色烟 / 棕黄色 Fe³⁺ =====
+    var rx = viewW * 0.68;
+    var jarW = 212, jarH = 252;
+    var jarX = rx - jarW / 2, jarY = baseY - jarH - 14;
+    roundRectPath(jarX, jarY, jarW, jarH, 22);
+    var jg = ctx.createLinearGradient(jarX, jarY, jarX + jarW, jarY + jarH);
+    jg.addColorStop(0, 'rgba(150,190,230,0.18)');
+    jg.addColorStop(0.5, 'rgba(120,170,220,0.10)');
+    jg.addColorStop(1, 'rgba(150,190,230,0.20)');
+    ctx.fillStyle = jg;
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(180,215,255,0.55)';
+    ctx.lineWidth = 3;
+    ctx.stroke();
+
+    // Cl₂ 黄绿色气体
+    ctx.save();
+    ctx.globalAlpha = 0.16 + 0.06 * (1 - windowT(t, 0.30, 0.90));
+    ctx.fillStyle = '#c8e06a';
+    roundRectPath(jarX + 11, jarY + 12, jarW - 22, jarH - 26, 16);
+    ctx.fill();
+    ctx.restore();
+    drawText('Cl₂（黄绿色）', rx, jarY + 30, 12, '#d4e57a', 'center', 0.9);
+
+    // 棕黄色 FeCl₃ 溶液（底部液层渐起）
+    var fe3K = windowT(t, 0.55, 0.92);
+    if (fe3K > 0.02) {
+      ctx.save();
+      ctx.globalAlpha = 0.30 + fe3K * 0.32;
+      ctx.fillStyle = '#b8860b';
+      roundRectPath(jarX + 11, jarY + jarH - 16 - 52 * fe3K, jarW - 22, 52 * fe3K, 10);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    // 螺旋铁丝 + 坩埚钳
+    var glowK = windowT(t, 0.22, 0.36) * (1 - windowT(t, 0.80, 0.95));
+    drawTongs(rx + 26, jarY + 34, -0.30, 104);
+    drawSpiralWire(rx, jarY + 44, jarY + jarH - 84, 5, glowK, time);
+
+    // 剧烈燃烧 + 火星
+    var burst = windowT(t, 0.26, 0.38) * (1 - windowT(t, 0.62, 0.80));
+    if (burst > 0.01) {
+      drawStarburst(rx, jarY + jarH * 0.45, 118 + 16 * Math.sin(time * 5), burst * 0.85, time, '#ffcf7a');
+      drawSparks(rx, jarY + jarH * 0.45, burst, time);
+      drawText('剧烈燃烧 · 棕褐色烟', rx, jarY - 30, 13, '#ffb74d', 'center', burst);
+    }
+
+    // 棕褐色烟（微粒下落沉降）
+    var smokeK = windowT(t, 0.36, 0.88);
+    if (smokeK > 0.02) {
+      drawPowderFall(rx, jarY + 40, 120, 16, smokeK, time, '#6b4a2f');
+    }
+
+    drawText('强氧化剂 Cl₂（电负性 3.16）', rx, jarY + jarH + 30, 12, '#ffd54f', 'center', 0.95);
+    if (fe3K > 0.35) {
+      drawText('棕黄色溶液（Fe³⁺）', rx, jarY + jarH + 52, 12, '#e0a24a', 'center', fe3K);
+    }
+
+    // 中央对照 VS
+    drawPill(viewW * 0.45, viewH * 0.16, '强氧化剂 → Fe³⁺（棕黄）  |  弱氧化剂 → Fe²⁺（浅绿）', '#ffd54f', 0.92);
+    drawPill(viewW * 0.45, baseY + 26, m.vesselLabel || '左 Fe+稀盐酸 | 右 Fe+Cl₂', '#90caf9', 0.9);
+  }
+
+  /** CO₂ 分步吸收：洗气瓶装置 + CO₃²⁻/HCO₃⁻ 摩尔分数双曲线微缩指示条 */
+  function drawMacroCo2NaohStepwise(m, t, time) {
+    var baseY = viewH * 0.86;
+    drawBench(baseY);
+
+    // ---- 左：CO₂ 气源钢瓶 ----
+    var srcX = viewW * 0.12, srcY = baseY - 34;
+    ctx.save();
+    roundRectPath(srcX - 32, srcY - 128, 64, 128, 16);
+    var sg = ctx.createLinearGradient(srcX - 32, srcY - 128, srcX + 32, srcY);
+    sg.addColorStop(0, 'rgba(130,165,205,0.62)');
+    sg.addColorStop(1, 'rgba(90,125,170,0.55)');
+    ctx.fillStyle = sg;
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(190,220,255,0.6)';
+    ctx.lineWidth = 2.5;
+    ctx.stroke();
+    ctx.restore();
+    drawText('CO₂ 气源', srcX, srcY - 146, 11, '#9fd8ff', 'center', 0.9);
+
+    // ---- 洗气瓶（长管进气到液底 + 短管出气） ----
+    var bx = viewW * 0.36, bottleW = 158, bottleH = 216;
+    var bottleY = baseY - bottleH - 18;
+    drawBeaker(bx - bottleW / 2, bottleY, bottleW, bottleH, 0.62, 'rgba(110,185,235,0.26)');
+    drawText('NaOH 溶液', bx, bottleY + bottleH + 22, 12, '#9fd8ff', 'center', 0.9);
+
+    // 导管：气源 → 瓶内长管
+    drawDeliveryTube(srcX + 16, srcY - 100, bx - 22, bottleY + 24);
+    // 长管插入液下
+    ctx.save();
+    ctx.strokeStyle = 'rgba(190,220,255,0.55)';
+    ctx.lineWidth = 6;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(bx - 22, bottleY + 24);
+    ctx.lineTo(bx - 22, bottleY + bottleH - 34);
+    ctx.stroke();
+    ctx.restore();
+
+    // 液下气泡（持续翻腾）
+    var bub = windowT(t, 0.10, 0.30) * (1 - windowT(t, 0.88, 0.99));
+    if (bub > 0.01) {
+      drawBubbles(bx - 22, bottleY + bottleH - 152, bottleY + bottleH - 40, bub * 1.25, time, 5);
+    }
+
+    // 短管出气（过量 CO₂ 尾气）
+    drawText('过量 CO₂ 尾气 →', bx + bottleW / 2 + 6, bottleY + 22, 11, '#8fa3c8', 'left', 0.85);
+
+    // ---- 右：摩尔分数双曲线微缩指示条 ----
+    var px = viewW * 0.74, py = viewH * 0.32;
+    var pw = 252, ph = 172;
+    ctx.save();
+    roundRectPath(px - pw / 2, py - 34, pw, ph + 78, 12);
+    ctx.fillStyle = 'rgba(16,28,48,0.78)';
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(127,212,255,0.35)';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+    ctx.restore();
+    drawText('摩尔分数 × t（实时联动）', px, py - 12, 12, '#ffd54f', 'center', 0.95);
+
+    var axL = px - pw / 2 + 34, axR = px + pw / 2 - 16;
+    var axT = py + 12, axB = py + ph - 26;
+    ctx.save();
+    ctx.strokeStyle = 'rgba(160,190,230,0.5)';
+    ctx.lineWidth = 1.4;
+    ctx.beginPath();
+    ctx.moveTo(axL, axT);
+    ctx.lineTo(axL, axB);
+    ctx.lineTo(axR, axB);
+    ctx.stroke();
+    ctx.restore();
+    drawText('t', axR + 2, axB + 2, 11, '#8fa3c8', 'left', 0.9);
+    drawText('x', axL - 10, axT - 2, 11, '#8fa3c8', 'center', 0.9);
+
+    // CO₃²⁻ 先升后降 / HCO₃⁻ 后半程升起
+    function fracCO3(tt) {
+      return tt <= 0.45 ? 0.85 * windowT(tt, 0.04, 0.45) : 0.85 * (1 - windowT(tt, 0.45, 0.92));
+    }
+    function fracHCO3(tt) {
+      return 0.92 * windowT(tt, 0.42, 0.95);
+    }
+    function drawCurve(fn, color) {
+      ctx.save();
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 2.6;
+      ctx.beginPath();
+      for (var i = 0; i <= 28; i++) {
+        var tt = i / 28;
+        var cx2 = axL + (axR - axL) * tt;
+        var cy2 = axB - (axB - axT) * fn(tt);
+        if (i === 0) ctx.moveTo(cx2, cy2); else ctx.lineTo(cx2, cy2);
+      }
+      ctx.stroke();
+      ctx.restore();
+    }
+    drawCurve(fracCO3, '#7fd4ff');
+    drawCurve(fracHCO3, '#ffb74d');
+
+    // 当前 t 竖线 + 两个落点
+    var curX = axL + (axR - axL) * t;
+    ctx.save();
+    ctx.strokeStyle = 'rgba(255,255,255,0.55)';
+    ctx.setLineDash([4, 4]);
+    ctx.lineWidth = 1.4;
+    ctx.beginPath();
+    ctx.moveTo(curX, axT);
+    ctx.lineTo(curX, axB);
+    ctx.stroke();
+    ctx.restore();
+    [{ f: fracCO3(t), c: '#7fd4ff' }, { f: fracHCO3(t), c: '#ffb74d' }].forEach(function (pt) {
+      var cy2 = axB - (axB - axT) * pt.f;
+      ctx.save();
+      ctx.fillStyle = pt.c;
+      ctx.beginPath();
+      ctx.arc(curX, cy2, 5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    });
+
+    drawText('CO₃²⁻（先升后降）', px - pw / 2 + 20, py + ph + 12, 11, '#7fd4ff', 'left', 0.95);
+    drawText('HCO₃⁻（后半程升起）', px - pw / 2 + 20, py + ph + 32, 11, '#ffb74d', 'left', 0.95);
+
+    drawPill(bx, bottleY - 44, '条件：' + (m.conditions || '常温 · 过量 CO₂ 持续通入'), '#ffe082', 0.95);
+    drawPill(bx, baseY + 26, m.vesselLabel || 'CO₂ → NaOH 溶液（洗气瓶）', '#90caf9', 0.9);
+    if (t > 0.80) {
+      drawPill(px, py + ph + 58, m.productLabel || 'HCO₃⁻ 主导（分步吸收收口）', '#ffb74d', 0.9);
+    }
+  }
+
+  /** 强酸强碱中和滴定：铁架台 + 滴定管 + 锥形瓶 + 计量点 pH 突跃读数 */
+  function drawMacroAcidBaseTitration(m, t, time) {
+    var baseY = viewH * 0.90;
+    drawBench(baseY);
+
+    // ---- 铁架台（底座 + 立柱 + 滴定管夹） ----
+    var standX = viewW * 0.30;
+    ctx.save();
+    var baseG = ctx.createLinearGradient(standX - 96, baseY - 26, standX + 96, baseY);
+    baseG.addColorStop(0, '#2c3646');
+    baseG.addColorStop(1, '#1c2532');
+    ctx.fillStyle = baseG;
+    roundRectPath(standX - 96, baseY - 26, 192, 26, 8);
+    ctx.fill();
+    ctx.fillStyle = '#3a4658';
+    roundRectPath(standX - 10, baseY - 344, 20, 324, 8);
+    ctx.fill();
+    ctx.fillStyle = '#4a5a70';
+    roundRectPath(standX - 6, baseY - 276, 92, 14, 6);
+    ctx.fill();
+    ctx.restore();
+
+    // ---- 碱式滴定管（细长刻度管 + 活塞 + 尖嘴） ----
+    var burX = standX + 56, burTop = baseY - 452, burH = 306, burW = 26;
+    ctx.save();
+    roundRectPath(burX - burW / 2, burTop, burW, burH, 12);
+    var glass = ctx.createLinearGradient(burX - burW / 2, burTop, burX + burW / 2, burTop + burH);
+    glass.addColorStop(0, 'rgba(170,205,240,0.35)');
+    glass.addColorStop(1, 'rgba(170,205,240,0.14)');
+    ctx.fillStyle = glass;
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(190,220,255,0.60)';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    ctx.restore();
+
+    // 管内 NaOH 液面（随滴定推进下降）
+    var fillK = 0.92 - 0.52 * windowT(t, 0.06, 0.90);
+    var liqTop = burTop + 12 + (burH - 26) * (1 - fillK);
+    ctx.save();
+    ctx.globalAlpha = 0.42;
+    ctx.fillStyle = '#7fc4e8';
+    roundRectPath(burX - burW / 2 + 4, liqTop, burW - 8, Math.max(6, burTop + burH - 10 - liqTop), 8);
+    ctx.fill();
+    ctx.restore();
+
+    // 刻度线
+    for (var i = 0; i <= 6; i++) {
+      var sy = burTop + 18 + (burH - 40) * (i / 6);
+      ctx.fillStyle = 'rgba(220,240,255,0.5)';
+      ctx.fillRect(burX + burW / 2 + 2, sy, 9, 1.6);
+    }
+    drawText('碱式滴定管 · NaOH', burX + 30, burTop - 18, 12, '#b7e9ff', 'center', 0.95);
+
+    // 活塞 + 尖嘴
+    ctx.save();
+    ctx.fillStyle = '#8fa3c8';
+    roundRectPath(burX - 16, burTop + burH - 8, 32, 12, 5);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(burX - 5, burTop + burH + 4);
+    ctx.lineTo(burX + 5, burTop + burH + 4);
+    ctx.lineTo(burX + 1.5, burTop + burH + 22);
+    ctx.lineTo(burX - 1.5, burTop + burH + 22);
+    ctx.closePath();
+    ctx.fillStyle = 'rgba(190,220,250,0.7)';
+    ctx.fill();
+    ctx.restore();
+
+    // ---- 锥形瓶（承接液滴 · 酚酞终点变色） ----
+    var flaskX = burX, flaskY = burTop + burH + 108;
+    var pinkK = windowT(t, 0.75, 0.81);
+    var fr = Math.round(120 + 120 * pinkK), fg = Math.round(190 - 62 * pinkK), fb = Math.round(235 - 58 * pinkK);
+    drawConicalFlask(flaskX, flaskY, 196, 192, 0.52,
+      'rgba(' + fr + ',' + fg + ',' + fb + ',' + (0.26 + pinkK * 0.34) + ')');
+
+    // 液滴逐滴下落（t 推进）
+    var dripK = windowT(t, 0.06, 0.72) * (1 - windowT(t, 0.78, 0.88));
+    if (dripK > 0.02) {
+      drawDrip(burX, burTop + burH + 28, flaskY + 64, dripK, time, 4, 'rgba(170,215,245,0.92)');
+    }
+
+    if (pinkK > 0.15) {
+      drawText('酚酞终点：无色 → 浅粉红！', flaskX, flaskY + 222, 13, '#ff9bb5', 'center', pinkK);
+    } else {
+      drawText('酚酞无色（H⁺ 尚未中和完）', flaskX, flaskY + 222, 12, '#b7e9ff', 'center', 0.9);
+    }
+
+    // ---- 右：实时 pH 读数面板（跨数量级突跃） ----
+    var hudX = viewW * 0.80, hudY = viewH * 0.30;
+    var hudW = 216, hudH = 214;
+    ctx.save();
+    roundRectPath(hudX - hudW / 2, hudY - 40, hudW, hudH, 14);
+    ctx.fillStyle = 'rgba(12,22,40,0.86)';
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(127,212,255,0.4)';
+    ctx.lineWidth = 1.6;
+    ctx.stroke();
+    ctx.restore();
+    drawText('实时 pH 读数', hudX, hudY - 16, 13, '#7fd4ff', 'center', 0.95);
+
+    // 分段 pH：1.0 → 2.3 → 7.00（计量点突跃!）→ 9.8
+    var ph;
+    if (t < 0.62) ph = 1.0 + (t / 0.62) * 1.3;
+    else if (t < 0.75) ph = 2.3 + ((t - 0.62) / 0.13) * 4.7;
+    else if (t < 0.86) ph = 7.0 + ((t - 0.75) / 0.11) * 2.8;
+    else ph = 9.8 + ((t - 0.86) / 0.14) * 0.7;
+
+    var jumpK = windowT(t, 0.72, 0.78);
+    var phText = (t >= 0.74 && t < 0.80) ? ph.toFixed(2) : ph.toFixed(1);
+    drawText('pH: ' + phText, hudX, hudY + 28, 32, jumpK > 0.5 ? '#ffd54f' : '#b7e9ff', 'center', 1);
+    if (jumpK > 0.3) {
+      drawText('计量点突跃!', hudX, hudY + 66, 16, '#ffd54f', 'center', jumpK);
+    }
+
+    // pH 1~14 色带 + 游标
+    var barY = hudY + 92, barW = hudW - 44;
+    var barG = ctx.createLinearGradient(hudX - barW / 2, 0, hudX + barW / 2, 0);
+    barG.addColorStop(0, '#ff6b6b');
+    barG.addColorStop(0.42, '#ffd54f');
+    barG.addColorStop(0.55, '#81c784');
+    barG.addColorStop(1, '#64b5f6');
+    ctx.save();
+    roundRectPath(hudX - barW / 2, barY, barW, 12, 6);
+    ctx.fillStyle = barG;
+    ctx.fill();
+    var cursorX = hudX - barW / 2 + barW * clamp01((ph - 1) / 13);
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.moveTo(cursorX, barY - 6);
+    ctx.lineTo(cursorX - 6, barY - 15);
+    ctx.lineTo(cursorX + 6, barY - 15);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+    drawText('1.0', hudX - barW / 2, barY + 28, 10, '#8fa3c8', 'center', 0.9);
+    drawText('7.0', hudX, barY + 28, 10, '#8fa3c8', 'center', 0.9);
+    drawText('14', hudX + barW / 2, barY + 28, 10, '#8fa3c8', 'center', 0.9);
+    drawText('pH: 1.0 → 2.3 → 7.00（计量点突跃!）→ 9.8', hudX, hudY + 158, 11, '#ffe082', 'center', 0.95);
+
+    drawPill(standX, burTop - 46, '条件：' + (m.conditions || '常温 · 边滴边振摇 · 酚酞指示'), '#ffe082', 0.95);
+    drawPill(standX, baseY + 24, m.vesselLabel || '酸式/碱式滴定管 + 锥形瓶', '#90caf9', 0.9);
+    if (pinkK > 0.4) {
+      drawPill(hudX, hudY + hudH - 12, m.productLabel || '计量点：无色 → 浅粉红（pH 突跃）', '#ff9bb5', 0.92);
+    }
+  }
+
   // 场景注册表（卡带 macro.scene 选用）
   MACRO_SCENES.combustion = drawMacroCombustion;
   MACRO_SCENES.electrolysis = drawMacroElectrolysis;
@@ -2949,6 +3422,10 @@
   MACRO_SCENES.n2_h2_nh3 = drawMacroN2H2Nh3;
   MACRO_SCENES.cl2_h2o_disprop = drawMacroCl2H2oDisprop;
   MACRO_SCENES.cu_nh3_complex = drawMacroCuNh3Complex;
+  MACRO_SCENES.limiting_h2_o2 = drawMacroLimitingH2O2;
+  MACRO_SCENES.fe_oxidant_game = drawMacroFeOxidantGame;
+  MACRO_SCENES.co2_naoh_stepwise = drawMacroCo2NaohStepwise;
+  MACRO_SCENES.acid_base_titration = drawMacroAcidBaseTitration;
 
   /* ====================================================================== */
   /* 5. L2 分子动力学层                                                      */
@@ -3011,7 +3488,8 @@
 
   /* ====================================================================== */
   /* 5.5 S6 旁观粒子（观众离子）识别与聚焦降噪                              */
-  /*     判定：未参与成键/断键，且标签含「旁观/观众」，或全程仅做背景游荡。   */
+  /*     判定：atom.spectator === true 显式标记；或未参与成键/断键，        */
+  /*     且标签含「旁观/观众」，或全程仅做背景游荡。                        */
   /*     命中者（含其静态键离子团，如 SO₄²⁻）绘制时 alpha 降至 0.22。       */
   /* ====================================================================== */
 
@@ -3052,10 +3530,10 @@
       }
     });
 
-    // ③ 显式标记（atom.label / ion.label）或图例元素标记 → 整个静态键团旁观
+    // ③ 显式标记（atom.spectator / atom.label / ion.label）或图例元素标记 → 整个静态键团旁观
     atoms.forEach(function (a) {
       if (a.catalyst) return;
-      if (markText(a.label) || (a.ion && markText(a.ion.label)) || specEls[a.el]) {
+      if (a.spectator === true || markText(a.label) || (a.ion && markText(a.ion.label)) || specEls[a.el]) {
         spec[find(a.id)] = true;
       }
     });
@@ -3150,9 +3628,6 @@
     drawText('L2 · 分子动力学层', 22, 28, 15, '#7fd4ff', 'left', 0.9);
     drawText('看得见：分子热运动 · 有效碰撞 · 旧键断裂 · 新键形成', 22, 52, 12, '#8fa3c8', 'left', 0.85);
     drawCaption(mol.captions, t);
-
-    // S11 势能曲线 HUD（Layer 4.5：粒子之上、胶囊之下）
-    drawEnergyHUD(cartridge, t);
 
     // ⑤ 键标签与浮动解说胶囊永远在最顶层
     flushPills();
@@ -3385,9 +3860,6 @@
       drawPill(x, y, lb.text, '#ffe082', alpha);
     });
 
-    // S11 势能曲线 HUD（Layer 4.5：粒子之上、胶囊之下）
-    drawEnergyHUD(cartridge, t);
-
     // ⑤ 键标签与浮动解说胶囊永远在最顶层
     flushPills();
   }
@@ -3470,7 +3942,7 @@
   }
 
   /* ====================================================================== */
-  /* 6.9 S11 · 📈 势能曲线 (E) HUD 示波器（Layer 4.5：高于粒子，低于胶囊）   */
+  /* 6.9 S12 · 📈 反应势能面与动力学 (PES) 独立示波器面板（右侧栏卡片）        */
   /* ====================================================================== */
 
   /**
@@ -3504,147 +3976,290 @@
     return ea + (dh - ea) * smoothstep((t - 0.45) / 0.55);
   }
 
-  function pesPhaseText(t) {
-    if (t < 0.20) return '0~0.20 反应物基态';
-    if (t < 0.40) return '0.20~0.40 吸收活化能爬坡';
-    if (t < 0.52) return '0.40~0.52 [‡] 断键过渡态鞍点';
-    if (t < 0.85) return '0.52~0.85 新键生成释放能量';
-    return '0.85~1.00 生成物稳态';
+  /** 实时动力学阶段文本：`0.45 [‡ 过渡态鞍点] 旧键半断 · 新键半生` */
+  function pesStageText(t) {
+    var n = clamp01(t).toFixed(2);
+    if (t < 0.20) return n + ' [反应物基态] 化学键稳固 · 体系低能';
+    if (t < 0.40) return n + ' [活化爬坡] 吸收活化能 · 旧键被拉伸';
+    if (t < 0.52) return n + ' [‡ 过渡态鞍点] 旧键半断 · 新键半生';
+    if (t < 0.85) return n + ' [新键生成] 越垒滑落 · 释放能量';
+    return n + ' [生成物稳态] 新键稳固 · 能量落定';
   }
 
-  /** Canvas 右上角毛玻璃 HUD：分段 smoothstep 势能曲线 + 双轨催化 + 滑行游标 */
-  function drawEnergyHUD(cartridge, t) {
-    if (!state.energyHud) return;
+  /** 参数徽章行 HTML：ΔH / Ea / Ea(催化) 大字号高对比 */
+  function pesMetaHTML(ep) {
+    function fmt(v) { return String(v); }
+    var html = '<span class="pes-badge ' + (ep.dh < 0 ? 'dh-neg' : 'dh-pos') + '">ΔH = ' +
+      fmt(ep.dh) + ' kJ/mol (' + (ep.dh < 0 ? '放热' : '吸热') + ')</span>';
+    html += '<span class="pes-badge ea">Ea = ' + fmt(ep.ea) + ' kJ/mol</span>';
+    if (ep.ea_cat != null) {
+      html += '<span class="pes-badge cat">Ea(催化) = ' + fmt(ep.ea_cat) + ' kJ/mol</span>';
+    }
+    if (ep.inferred) html += '<span class="pes-badge inferred">智能推导</span>';
+    return html;
+  }
+
+  /** PES 画布局部文字助手（独立 2D 上下文，与主画布 drawText 解耦） */
+  function pesText(g, text, x, y, size, color, align, weight) {
+    g.save();
+    g.font = (weight || '600') + ' ' + size +
+      'px "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif';
+    g.fillStyle = color;
+    g.textAlign = align || 'left';
+    g.textBaseline = 'middle';
+    g.fillText(text, x, y);
+    g.restore();
+  }
+
+  /** PES 画布发光游标圆点（半径 r + 外发光光晕） */
+  function pesGlowDot(g, x, y, r, color, glow) {
+    g.save();
+    var halo = g.createRadialGradient(x, y, 0, x, y, r * 3.6);
+    halo.addColorStop(0, glow);
+    halo.addColorStop(1, 'rgba(0,0,0,0)');
+    g.fillStyle = halo;
+    g.beginPath();
+    g.arc(x, y, r * 3.6, 0, Math.PI * 2);
+    g.fill();
+    g.fillStyle = color;
+    g.beginPath();
+    g.arc(x, y, r, 0, Math.PI * 2);
+    g.fill();
+    g.restore();
+  }
+
+  /** 垂直双向虚线箭头（标出 Ea / ΔH 跨度） */
+  function pesVArrow(g, x, yTop, yBot, color, dashed) {
+    g.save();
+    g.strokeStyle = color;
+    g.fillStyle = color;
+    g.lineWidth = 1.4;
+    if (dashed !== false) g.setLineDash([4, 3]);
+    g.beginPath();
+    g.moveTo(x, yTop);
+    g.lineTo(x, yBot);
+    g.stroke();
+    g.setLineDash([]);
+    var head = 4.5;
+    g.beginPath();
+    g.moveTo(x, yTop);
+    g.lineTo(x - head, yTop + head * 1.7);
+    g.lineTo(x + head, yTop + head * 1.7);
+    g.closePath();
+    g.fill();
+    g.beginPath();
+    g.moveTo(x, yBot);
+    g.lineTo(x - head, yBot - head * 1.7);
+    g.lineTo(x + head, yBot - head * 1.7);
+    g.closePath();
+    g.fill();
+    g.restore();
+  }
+
+  /**
+   * S12 · 独立高分辨率 PES 示波器面板（绑定 #pes-canvas，DPR 抗锯齿）
+   * 网格基准线 · 反应物 H₁ / 生成物 H₂ 参考虚线 · 双轨催化对照曲线
+   * t=0.45 峰值垂直双向箭头标 Ea · 右侧终态标 ΔH · 大号发光游标实时滑行
+   */
+  var pesLastMeta = '';
+  var pesLastStage = '';
+
+  function renderPESPanel(cartridge, t) {
+    var cv = els.pesCanvas;
+    if (!cv || !cv.getContext) return;
     var ep = getEffectiveEnergyProfile(cartridge);
     if (!ep) return;
 
-    var compact = viewW < 820;
-    var W = compact ? 160 : 215;
-    var H = compact ? 92 : 118;
-    var x0 = viewW - W - 12;
-    var y0 = 12;
+    var cssW = cv.clientWidth || 300;
+    var cssH = cv.clientHeight || 182;
+    if (cssW < 40 || cssH < 40) return;
 
-    ctx.save();
-    roundRectPath(x0, y0, W, H, 12);
-    ctx.fillStyle = 'rgba(12, 18, 32, 0.84)';
-    ctx.fill();
-    ctx.strokeStyle = 'rgba(100, 180, 255, 0.28)';
-    ctx.lineWidth = 1;
-    ctx.stroke();
+    // devicePixelRatio 高清抗锯齿：仅尺寸变化时重建位图
+    var dpr = window.devicePixelRatio || 1;
+    var bw = Math.round(cssW * dpr);
+    var bh = Math.round(cssH * dpr);
+    if (cv.width !== bw || cv.height !== bh) {
+      cv.width = bw;
+      cv.height = bh;
+    }
+    var g = cv.getContext('2d');
+    g.setTransform(dpr, 0, 0, dpr, 0, 0);
+    g.clearRect(0, 0, cssW, cssH);
 
-    drawText('📈 势能曲线 (E)', x0 + 10, y0 + 13, compact ? 10 : 11, '#b7e9ff', 'left', 0.95, '700');
+    // 深色示波器底
+    var bg = g.createLinearGradient(0, 0, 0, cssH);
+    bg.addColorStop(0, '#0c1626');
+    bg.addColorStop(1, '#081020');
+    g.fillStyle = bg;
+    g.fillRect(0, 0, cssW, cssH);
 
-    var paramStr = ep.inferred
-      ? (ep.dh < 0 ? '放热 (ΔH<0)' : '吸热 (ΔH>0)') + ' · 智能推导'
-      : 'ΔH = ' + ep.dh + ' kJ/mol | Ea = ' + ep.ea;
-    drawText(paramStr, x0 + 10, y0 + 27, compact ? 8 : 9.5, '#8fa3c8', 'left', 0.95, '600');
-
-    var plotX = x0 + 14;
-    var plotY = y0 + (compact ? 34 : 40);
-    var plotW = W - 24;
-    var plotH = (y0 + H - 24) - plotY;
+    // 内部坐标系留白
+    var padL = 44, padR = 60, padT = 16, padB = 20;
+    var plotX = padL, plotY = padT;
+    var plotW = Math.max(40, cssW - padL - padR);
+    var plotH = Math.max(30, cssH - padT - padB);
 
     var dh = ep.dh;
     var eaMain = ep.ea;
     var eaCat = ep.ea_cat;
+    var mainPeak = eaCat != null ? eaCat : eaMain;
+
     var lo = Math.min(0, dh);
     var hi = Math.max(eaMain, dh, 0);
-    if (hi - lo < 1) hi = lo + 1;
-    var vPad = 3;
+    var span = hi - lo;
+    if (span < 1) { span = 1; hi = lo + 1; }
+    lo -= span * 0.10;
+    hi += span * 0.16;
 
     function mapE(e) {
-      return plotY + plotH - vPad - ((e - lo) / (hi - lo)) * (plotH - vPad * 2);
+      return plotY + plotH - ((e - lo) / (hi - lo)) * plotH;
     }
     function mapT(tt) { return plotX + clamp01(tt) * plotW; }
+
+    // 网格基准线
+    g.save();
+    g.strokeStyle = 'rgba(127, 212, 255, 0.07)';
+    g.lineWidth = 1;
+    for (var gi = 0; gi <= 4; gi++) {
+      var gy = plotY + (plotH * gi) / 4;
+      g.beginPath();
+      g.moveTo(plotX, gy);
+      g.lineTo(plotX + plotW, gy);
+      g.stroke();
+      var gx = plotX + (plotW * gi) / 4;
+      g.beginPath();
+      g.moveTo(gx, plotY);
+      g.lineTo(gx, plotY + plotH);
+      g.stroke();
+    }
+    g.restore();
+
+    // 反应物基态参考虚线（H₁）与生成物终态参考虚线（H₂）
+    var yR = mapE(0);
+    var yP = mapE(dh);
+    g.save();
+    g.setLineDash([5, 4]);
+    g.lineWidth = 1.2;
+    g.strokeStyle = 'rgba(183, 233, 255, 0.5)';
+    g.beginPath();
+    g.moveTo(plotX, yR);
+    g.lineTo(plotX + plotW, yR);
+    g.stroke();
+    g.strokeStyle = 'rgba(255, 213, 79, 0.55)';
+    g.beginPath();
+    g.moveTo(plotX, yP);
+    g.lineTo(plotX + plotW, yP);
+    g.stroke();
+    g.restore();
+    pesText(g, '反应物 H₁', plotX + 6, yR - 8, 10, '#b7e9ff', 'left', '700');
+    pesText(g, '生成物 H₂', plotX + 6, yP + (dh < 0 ? 10 : -10), 10, '#ffd54f', 'left', '700');
+
+    // 平滑势能曲线轨迹（宽幅高采样）
     function traceCurve(peakEa) {
-      ctx.beginPath();
-      var N = 56;
+      g.beginPath();
+      var N = 96;
       for (var i = 0; i <= N; i++) {
         var tt = i / N;
         var px = mapT(tt), py = mapE(pesEnergyAt(tt, dh, peakEa));
-        if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+        if (i === 0) g.moveTo(px, py); else g.lineTo(px, py);
       }
     }
 
-    // 双轨催化对照：灰色虚线 = 非催化高能垒；青绿实线 = 催化低能垒（ΔH 终态一致）
+    // 双轨催化对照：灰白虚线 = 无催化高能垒原路径；亮青绿实线 = 催化低能垒路径
     if (eaCat != null) {
-      ctx.save();
-      ctx.setLineDash([4, 4]);
+      g.save();
+      g.setLineDash([6, 5]);
       traceCurve(eaMain);
-      ctx.strokeStyle = 'rgba(143, 163, 200, 0.55)';
-      ctx.lineWidth = 1.4;
-      ctx.stroke();
-      ctx.restore();
+      g.strokeStyle = 'rgba(219, 228, 240, 0.55)';
+      g.lineWidth = 2;
+      g.stroke();
+      g.restore();
+      pesText(g, '无催化 Ea', mapT(0.45) + 4, mapE(eaMain) - 9, 9.5, '#dbe4f0', 'left', '700');
     }
-    var mainPeak = eaCat != null ? eaCat : eaMain;
     traceCurve(mainPeak);
-    ctx.strokeStyle = 'rgba(57, 230, 195, 0.20)';
-    ctx.lineWidth = 6;
-    ctx.stroke();
+    g.strokeStyle = 'rgba(57, 230, 195, 0.18)';
+    g.lineWidth = 6.5;
+    g.stroke();
     traceCurve(mainPeak);
-    ctx.strokeStyle = '#39e6c3';
-    ctx.lineWidth = 2;
-    ctx.stroke();
-
+    g.strokeStyle = '#39e6c3';
+    g.lineWidth = 2.75;
+    g.stroke();
     if (eaCat != null && ep.catLabel) {
-      drawText(ep.catLabel, mapT(0.45), mapE(eaCat) + 11, compact ? 7.5 : 8.5, '#39e6c3', 'center', 0.9, '600');
+      pesText(g, ep.catLabel, mapT(0.45) + 4, mapE(eaCat) + 11, 9.5, '#39e6c3', 'left', '700');
     }
 
-    // 实时滑行游标：竖直参考线 + 发光圆点（过渡态窗口琥珀金/亮红高亮）
+    // t=0.45 峰值处垂直双向虚线箭头 → 活化能 Ea 跨度
+    var xEa = mapT(0.45) + 12;
+    pesVArrow(g, xEa, mapE(mainPeak), yR, eaCat != null ? '#39e6c3' : '#7fd4ff');
+    pesText(g, 'Ea' + (eaCat != null ? '(催化)' : '') + ' = ' + mainPeak,
+      xEa + 6, mapE(mainPeak) + 10, 9.5, eaCat != null ? '#39e6c3' : '#7fd4ff', 'left', '700');
+    if (eaCat != null) {
+      pesVArrow(g, mapT(0.45) - 12, mapE(eaMain), yR, 'rgba(219, 228, 240, 0.6)');
+      pesText(g, 'Ea = ' + eaMain, mapT(0.45) - 16, mapE(eaMain) - 9, 9, '#dbe4f0', 'right', '700');
+    }
+
+    // 右侧终态：焓变 ΔH 高度差
+    var xDh = plotX + plotW + 26;
+    pesVArrow(g, xDh, Math.min(yR, yP), Math.max(yR, yP), '#ffb74d');
+    pesText(g, 'ΔH = ' + dh, xDh, Math.min(yR, yP) - 9, 9.5, '#ffb74d', 'center', '700');
+
+    // 实时发光游标：竖直参考线 + 大号圆点（过渡态窗口亮琥珀金 + [‡] 标记）
     var eNow = pesEnergyAt(t, dh, mainPeak);
     var cx = mapT(t), cy = mapE(eNow);
-    ctx.save();
-    ctx.setLineDash([2, 3]);
-    ctx.strokeStyle = 'rgba(183, 233, 255, 0.25)';
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(cx, plotY);
-    ctx.lineTo(cx, plotY + plotH);
-    ctx.stroke();
-    ctx.restore();
+    g.save();
+    g.setLineDash([2, 3]);
+    g.strokeStyle = 'rgba(183, 233, 255, 0.3)';
+    g.lineWidth = 1;
+    g.beginPath();
+    g.moveTo(cx, plotY);
+    g.lineTo(cx, plotY + plotH);
+    g.stroke();
+    g.restore();
 
     var nearTS = t >= 0.40 && t <= 0.50;
     if (nearTS) {
-      drawGlowCircle(cx, cy, 4, '#ff8a65', '#ffd54f', 1);
-      drawText('[‡ 过渡态]', cx, cy - 13, compact ? 7.5 : 8.5, '#ffd54f', 'center', 0.95, '700');
+      pesGlowDot(g, cx, cy, 6, '#ffb74d', 'rgba(255, 213, 79, 0.45)');
+      pesText(g, '[‡]', cx, cy - 15, 11, '#ffd54f', 'center', '700');
     } else {
-      drawGlowCircle(cx, cy, 3.5, '#39e6c3', '#b7e9ff', 1);
+      pesGlowDot(g, cx, cy, 6, '#39e6c3', 'rgba(57, 230, 195, 0.4)');
     }
 
-    var inTs = t >= 0.40 && t <= 0.52;
-    drawText(pesPhaseText(t), x0 + 10, y0 + H - 10, compact ? 8 : 9.5,
-      inTs ? '#ffd54f' : '#8fa3c8', 'left', 0.95, '600');
-    ctx.restore();
-    ctx.globalAlpha = 1;
+    // 同步更新参数徽章行与实时动力学状态栏（仅内容变化时写 DOM）
+    var metaHTML = pesMetaHTML(ep);
+    if (els.pesMeta && pesLastMeta !== metaHTML) {
+      els.pesMeta.innerHTML = metaHTML;
+      pesLastMeta = metaHTML;
+    }
+    var stageStr = pesStageText(t);
+    if (els.pesStage && pesLastStage !== stageStr) {
+      els.pesStage.textContent = stageStr;
+      els.pesStage.classList.toggle('ts', t >= 0.40 && t <= 0.52);
+      pesLastStage = stageStr;
+    }
   }
 
-  /* ---------------- 开关状态：localStorage 键 chem_hud_energy ---------------- */
+  /* ---------------- E / 📈 按钮：平滑滚动 + 高亮闪烁聚焦 PES 面板 ---------------- */
 
-  function persistEnergyHud() {
-    try {
-      window.localStorage.setItem('chem_hud_energy', state.energyHud ? '1' : '0');
-    } catch (e) { /* 隐私模式静默降级 */ }
-  }
+  var pesFlashTimer = 0;
 
-  function restoreEnergyHud() {
-    try {
-      var v = window.localStorage.getItem('chem_hud_energy');
-      if (v === '0' || v === 'false') state.energyHud = false;
-      else if (v === '1' || v === 'true') state.energyHud = true;
-    } catch (e) { /* 维持默认开启 */ }
-  }
-
-  function applyEnergyHudUI() {
-    if (!els.energyHudBtn) return;
-    els.energyHudBtn.classList.toggle('active', state.energyHud);
-    els.energyHudBtn.setAttribute('aria-pressed', state.energyHud ? 'true' : 'false');
-  }
-
-  function toggleEnergyHud() {
-    state.energyHud = !state.energyHud;
-    persistEnergyHud();
-    applyEnergyHudUI();
-    render();
+  function focusPESPanel() {
+    var card = els.pesCard || $('pes-card');
+    if (!card) return;
+    if (card.scrollIntoView) {
+      try {
+        card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      } catch (e) {
+        card.scrollIntoView();
+      }
+    }
+    card.classList.remove('pes-flash');
+    void card.offsetWidth;   // 强制重排，重启动画
+    card.classList.add('pes-flash');
+    if (pesFlashTimer) clearTimeout(pesFlashTimer);
+    pesFlashTimer = setTimeout(function () {
+      card.classList.remove('pes-flash');
+      pesFlashTimer = 0;
+    }, 1200);
   }
 
   /* ====================================================================== */
@@ -3668,6 +4283,9 @@
 
     // 全局时间轴相位条（画布底部细线）
     drawPhaseBar();
+
+    // S12：右侧栏 PES 势能面示波器面板与主画布逐帧同步重绘
+    renderPESPanel(cartridge, state.t);
   }
 
   function drawPhaseBar() {
@@ -3889,7 +4507,11 @@
     els.typeFilters = $('typeFilters');
     els.focusToggle = $('focusToggle');
     els.focusToggleWrap = $('focusToggleWrap');
-    els.energyHudBtn = $('btn-energy-hud');  // S11：📈 势能曲线 HUD 切换按钮
+    els.energyHudBtn = $('btn-energy-hud');  // S12：📈 势能曲线按钮（平滑滚动聚焦 PES 面板）
+    els.pesCard = $('pes-card');            // S12：右侧栏 PES 势能面卡片
+    els.pesCanvas = $('pes-canvas');        // S12：PES 独立高分辨率画布
+    els.pesMeta = $('pes-card-meta');       // S12：ΔH / Ea / Ea(催化) 参数徽章行
+    els.pesStage = $('pes-card-stage');     // S12：实时动力学状态栏
     els.sideBackdrop = $('sideBackdrop');   // S9：移动端目录抽屉遮罩
     els.curStarBtn = $('curStarBtn');       // S9：顶栏星标按钮
 
@@ -3977,9 +4599,9 @@
       });
     }
 
-    // S11：📈 势能曲线 HUD 切换按钮（默认开启，持久化至 chem_hud_energy）
+    // S12：📈 势能曲线按钮 → 平滑滚动 + 高亮闪烁聚焦右侧 PES 面板
     if (els.energyHudBtn) {
-      els.energyHudBtn.addEventListener('click', toggleEnergyHud);
+      els.energyHudBtn.addEventListener('click', focusPESPanel);
     }
 
     // 三层切换
@@ -4000,7 +4622,6 @@
 
     // S9：恢复上次视界层级的按钮高亮 + 全局键盘快捷键
     applyLayerUI();
-    applyEnergyHudUI();
     bindKeyboardShortcuts();
     syncSidebarForViewport();
   }
@@ -4487,10 +5108,10 @@
         return;
       }
 
-      // E：一键切换 📈 势能曲线 (E) HUD 示波器
+      // E：高亮/闪烁聚焦右侧「反应势能面与动力学 (PES)」面板
       if (key === 'e' || key === 'E') {
         ev.preventDefault();
-        toggleEnergyHud();
+        focusPESPanel();
       }
     });
   }
@@ -4509,7 +5130,6 @@
     });
     restoreLastView();   // S9：恢复上次学习现场（反应卡带 + 视界层级）
     restoreStars();      // S9：恢复 ⭐ 重点攻克星标收藏夹
-    restoreEnergyHud();  // S11：恢复 📈 势能曲线 HUD 开关现场
     bindUI();
     requestAnimationFrame(loop);
   }

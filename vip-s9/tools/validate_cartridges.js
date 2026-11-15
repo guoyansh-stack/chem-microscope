@@ -91,13 +91,27 @@ while ((rm = regRe.exec(engineSrc)) !== null) {
 if (Object.keys(macroScenes).length === 0) fail('engine.js：MACRO_SCENES 注册表提取结果为空');
 
 /* ---------------------------------------------------------------------- */
-/* 2. 加载全部卡带（data/*.js 在 Node 下挂到 globalThis）                  */
+/* 2. 加载全部卡带（显式加载列表 = 全量校验清单；data/*.js 挂到 globalThis） */
 /* ---------------------------------------------------------------------- */
 
 globalThis.CHEM_CARTRIDGES = [];
-var dataFiles = fs.readdirSync(DATA_DIR).filter(function (f) { return f.endsWith('.js'); }).sort();
+var dataFiles = [
+  'ch1_water.js',
+  'ch2_5_grade8_core.js',
+  'ch2_oxygen_carbon.js',
+  'ch3_metals.js',
+  'ch4_acids_bases_salts.js',
+  'ch5_highschool_leap.js',
+  'ch6_stoichiometry_quant.js',   // S12-Step2：第6章 定量化学计量与分步反应
+  'glossary_extensions.js'
+];
 dataFiles.forEach(function (f) {
-  require(path.join(DATA_DIR, f));
+  var p = path.join(DATA_DIR, f);
+  if (!fs.existsSync(p)) {
+    fail('数据文件缺失：' + f);
+    return;
+  }
+  require(p);
 });
 
 var carts = globalThis.CHEM_CARTRIDGES;
@@ -342,7 +356,7 @@ if (!extensions || typeof extensions !== 'object') {
     var ex = extensions[c.id];
     var ew = '拓展阅读 ' + c.id;
     if (!ex) {
-      fail(ew + '：缺少本反应的深度拓展阅读（S10 要求 22 篇全覆盖）');
+      fail(ew + '：缺少本反应的深度拓展阅读（S12 要求 26 篇全覆盖）');
       return;
     }
     if (!isNonEmptyStr(ex.title)) fail(ew + '：title 不能为空');
@@ -367,10 +381,10 @@ if (!extensions || typeof extensions !== 'object') {
 /* 4. 全局总量与章节覆盖                                                   */
 /* ---------------------------------------------------------------------- */
 
-if (carts.length !== 22) {
-  fail('卡带总数 ' + carts.length + ' ≠ 22（S10 验收口径：S1~S4 共 14 + S7 新增 4 大必考 + S10 新增 4 张高中跃迁）');
+if (carts.length !== 26) {
+  fail('卡带总数 ' + carts.length + ' ≠ 26（S12 验收口径：S1~S4 共 14 + S7 新增 4 大必考 + S10 新增 4 张高中跃迁 + S12 新增 4 张定量专训）');
 }
-['g8u1', 'g8u2', 'g8u3', 'g9e1', 'g9e2', 'g9leap'].forEach(function (ch) {
+['g8u1', 'g8u2', 'g8u3', 'g9e1', 'g9e2', 'g9leap', 'g9quant'].forEach(function (ch) {
   var n = carts.filter(function (c) { return c.chapter && c.chapter.id === ch; }).length;
   if (n === 0) fail('章节 ' + ch + ' 没有任何卡带');
 });
@@ -409,7 +423,7 @@ function finish() {
     console.log('\nRESULT: FAIL');
     process.exit(1);
   } else {
-    console.log('\nRESULT: VALID（22 张卡带坐标 / 时序 / 色标注册表 / 解说完整性 + S10 词典 15 条与拓展阅读 22 篇全部通过）');
+    console.log('\nRESULT: VALID（26 张卡带坐标 / 时序 / 色标注册表 / 解说完整性 + 词典与拓展阅读 26 篇全覆盖全部通过）');
     process.exit(0);
   }
 }
