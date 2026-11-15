@@ -105,7 +105,8 @@
     clock: 0,             // 动画时钟（驱动热运动）
     focus: false,         // S6：聚焦反应实质（弱化旁观粒子），仅作用于 L2/L3
     typeFilter: 'all',    // S6：目录栏反应类型筛选胶囊（all/syn/dec/disp/dbl/mix/star）
-    starred: []           // S9：⭐ 重点攻克星标收藏的反应卡带 id 列表
+    starred: [],          // S9：⭐ 重点攻克星标收藏的反应卡带 id 列表
+    energyHud: true       // S11：📈 势能曲线 (E) HUD 示波器显隐（localStorage: chem_hud_energy）
   };
 
   function currentCartridge() {
@@ -486,6 +487,9 @@
       drawPill(18, viewH - 92 - (ph.length - 1 - i) * 34,
         (a > 0.5 ? '✓ ' : '· ') + ph[i].label, '#b39ddb', 0.32 + a * 0.68, 'left');
     }
+
+    // S11 势能曲线 HUD（Layer 4.5：粒子之上、胶囊之下）
+    drawEnergyHUD(cartridge, t);
 
     // 全部胶囊置顶统一绘制
     flushPills();
@@ -3147,6 +3151,9 @@
     drawText('看得见：分子热运动 · 有效碰撞 · 旧键断裂 · 新键形成', 22, 52, 12, '#8fa3c8', 'left', 0.85);
     drawCaption(mol.captions, t);
 
+    // S11 势能曲线 HUD（Layer 4.5：粒子之上、胶囊之下）
+    drawEnergyHUD(cartridge, t);
+
     // ⑤ 键标签与浮动解说胶囊永远在最顶层
     flushPills();
   }
@@ -3378,6 +3385,9 @@
       drawPill(x, y, lb.text, '#ffe082', alpha);
     });
 
+    // S11 势能曲线 HUD（Layer 4.5：粒子之上、胶囊之下）
+    drawEnergyHUD(cartridge, t);
+
     // ⑤ 键标签与浮动解说胶囊永远在最顶层
     flushPills();
   }
@@ -3457,6 +3467,184 @@
     }
     if (line) lines.push(line);
     return lines;
+  }
+
+  /* ====================================================================== */
+  /* 6.9 S11 · 📈 势能曲线 (E) HUD 示波器（Layer 4.5：高于粒子，低于胶囊）   */
+  /* ====================================================================== */
+
+  /**
+   * 智能回退拟合：已有显式 energyProfile 直接返回；
+   * 否则按类型/标题/条件推导物理合理的默认参数（inferred: true）。
+   * 优先级：催化信号最具体 → 双轨对照；再判吸热关键词；其余默认放热。
+   */
+  function getEffectiveEnergyProfile(cartridge) {
+    if (!cartridge) return null;
+    if (cartridge.energyProfile) return cartridge.energyProfile;
+    var type = cartridge.type || '';
+    var hay = [cartridge.name, cartridge.shortName, cartridge.typeDesc,
+      cartridge.equation, cartridge.macro && cartridge.macro.conditions,
+      cartridge.summary].join(' ');
+    if (/催化剂|催化|MnO2|MnO₂|触媒/.test(hay)) {
+      return { dh: -95, ea: 80, ea_cat: 40, catLabel: '催化路径', inferred: true };
+    }
+    // 「分解」须排除「复分解」；高温+还原 / 通电 / 电解 / 煅烧归入吸热
+    if ((type.indexOf('分解') >= 0 && type.indexOf('复分解') < 0) ||
+        /通电|电解|煅烧/.test(hay) ||
+        (/高温/.test(hay) && /还原/.test(hay))) {
+      return { dh: 120, ea: 180, inferred: true };
+    }
+    return { dh: -140, ea: 95, inferred: true };
+  }
+
+  /** 势能面数学模型：t_peak=0.45（断键临界）达 Ea 峰值，t=1 落到 ΔH 终态 */
+  function pesEnergyAt(t, dh, ea) {
+    t = clamp01(t);
+    if (t <= 0.45) return ea * smoothstep(t / 0.45);
+    return ea + (dh - ea) * smoothstep((t - 0.45) / 0.55);
+  }
+
+  function pesPhaseText(t) {
+    if (t < 0.20) return '0~0.20 反应物基态';
+    if (t < 0.40) return '0.20~0.40 吸收活化能爬坡';
+    if (t < 0.52) return '0.40~0.52 [‡] 断键过渡态鞍点';
+    if (t < 0.85) return '0.52~0.85 新键生成释放能量';
+    return '0.85~1.00 生成物稳态';
+  }
+
+  /** Canvas 右上角毛玻璃 HUD：分段 smoothstep 势能曲线 + 双轨催化 + 滑行游标 */
+  function drawEnergyHUD(cartridge, t) {
+    if (!state.energyHud) return;
+    var ep = getEffectiveEnergyProfile(cartridge);
+    if (!ep) return;
+
+    var compact = viewW < 820;
+    var W = compact ? 160 : 215;
+    var H = compact ? 92 : 118;
+    var x0 = viewW - W - 12;
+    var y0 = 12;
+
+    ctx.save();
+    roundRectPath(x0, y0, W, H, 12);
+    ctx.fillStyle = 'rgba(12, 18, 32, 0.84)';
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(100, 180, 255, 0.28)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    drawText('📈 势能曲线 (E)', x0 + 10, y0 + 13, compact ? 10 : 11, '#b7e9ff', 'left', 0.95, '700');
+
+    var paramStr = ep.inferred
+      ? (ep.dh < 0 ? '放热 (ΔH<0)' : '吸热 (ΔH>0)') + ' · 智能推导'
+      : 'ΔH = ' + ep.dh + ' kJ/mol | Ea = ' + ep.ea;
+    drawText(paramStr, x0 + 10, y0 + 27, compact ? 8 : 9.5, '#8fa3c8', 'left', 0.95, '600');
+
+    var plotX = x0 + 14;
+    var plotY = y0 + (compact ? 34 : 40);
+    var plotW = W - 24;
+    var plotH = (y0 + H - 24) - plotY;
+
+    var dh = ep.dh;
+    var eaMain = ep.ea;
+    var eaCat = ep.ea_cat;
+    var lo = Math.min(0, dh);
+    var hi = Math.max(eaMain, dh, 0);
+    if (hi - lo < 1) hi = lo + 1;
+    var vPad = 3;
+
+    function mapE(e) {
+      return plotY + plotH - vPad - ((e - lo) / (hi - lo)) * (plotH - vPad * 2);
+    }
+    function mapT(tt) { return plotX + clamp01(tt) * plotW; }
+    function traceCurve(peakEa) {
+      ctx.beginPath();
+      var N = 56;
+      for (var i = 0; i <= N; i++) {
+        var tt = i / N;
+        var px = mapT(tt), py = mapE(pesEnergyAt(tt, dh, peakEa));
+        if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+      }
+    }
+
+    // 双轨催化对照：灰色虚线 = 非催化高能垒；青绿实线 = 催化低能垒（ΔH 终态一致）
+    if (eaCat != null) {
+      ctx.save();
+      ctx.setLineDash([4, 4]);
+      traceCurve(eaMain);
+      ctx.strokeStyle = 'rgba(143, 163, 200, 0.55)';
+      ctx.lineWidth = 1.4;
+      ctx.stroke();
+      ctx.restore();
+    }
+    var mainPeak = eaCat != null ? eaCat : eaMain;
+    traceCurve(mainPeak);
+    ctx.strokeStyle = 'rgba(57, 230, 195, 0.20)';
+    ctx.lineWidth = 6;
+    ctx.stroke();
+    traceCurve(mainPeak);
+    ctx.strokeStyle = '#39e6c3';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    if (eaCat != null && ep.catLabel) {
+      drawText(ep.catLabel, mapT(0.45), mapE(eaCat) + 11, compact ? 7.5 : 8.5, '#39e6c3', 'center', 0.9, '600');
+    }
+
+    // 实时滑行游标：竖直参考线 + 发光圆点（过渡态窗口琥珀金/亮红高亮）
+    var eNow = pesEnergyAt(t, dh, mainPeak);
+    var cx = mapT(t), cy = mapE(eNow);
+    ctx.save();
+    ctx.setLineDash([2, 3]);
+    ctx.strokeStyle = 'rgba(183, 233, 255, 0.25)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(cx, plotY);
+    ctx.lineTo(cx, plotY + plotH);
+    ctx.stroke();
+    ctx.restore();
+
+    var nearTS = t >= 0.40 && t <= 0.50;
+    if (nearTS) {
+      drawGlowCircle(cx, cy, 4, '#ff8a65', '#ffd54f', 1);
+      drawText('[‡ 过渡态]', cx, cy - 13, compact ? 7.5 : 8.5, '#ffd54f', 'center', 0.95, '700');
+    } else {
+      drawGlowCircle(cx, cy, 3.5, '#39e6c3', '#b7e9ff', 1);
+    }
+
+    var inTs = t >= 0.40 && t <= 0.52;
+    drawText(pesPhaseText(t), x0 + 10, y0 + H - 10, compact ? 8 : 9.5,
+      inTs ? '#ffd54f' : '#8fa3c8', 'left', 0.95, '600');
+    ctx.restore();
+    ctx.globalAlpha = 1;
+  }
+
+  /* ---------------- 开关状态：localStorage 键 chem_hud_energy ---------------- */
+
+  function persistEnergyHud() {
+    try {
+      window.localStorage.setItem('chem_hud_energy', state.energyHud ? '1' : '0');
+    } catch (e) { /* 隐私模式静默降级 */ }
+  }
+
+  function restoreEnergyHud() {
+    try {
+      var v = window.localStorage.getItem('chem_hud_energy');
+      if (v === '0' || v === 'false') state.energyHud = false;
+      else if (v === '1' || v === 'true') state.energyHud = true;
+    } catch (e) { /* 维持默认开启 */ }
+  }
+
+  function applyEnergyHudUI() {
+    if (!els.energyHudBtn) return;
+    els.energyHudBtn.classList.toggle('active', state.energyHud);
+    els.energyHudBtn.setAttribute('aria-pressed', state.energyHud ? 'true' : 'false');
+  }
+
+  function toggleEnergyHud() {
+    state.energyHud = !state.energyHud;
+    persistEnergyHud();
+    applyEnergyHudUI();
+    render();
   }
 
   /* ====================================================================== */
@@ -3701,6 +3889,7 @@
     els.typeFilters = $('typeFilters');
     els.focusToggle = $('focusToggle');
     els.focusToggleWrap = $('focusToggleWrap');
+    els.energyHudBtn = $('btn-energy-hud');  // S11：📈 势能曲线 HUD 切换按钮
     els.sideBackdrop = $('sideBackdrop');   // S9：移动端目录抽屉遮罩
     els.curStarBtn = $('curStarBtn');       // S9：顶栏星标按钮
 
@@ -3788,6 +3977,11 @@
       });
     }
 
+    // S11：📈 势能曲线 HUD 切换按钮（默认开启，持久化至 chem_hud_energy）
+    if (els.energyHudBtn) {
+      els.energyHudBtn.addEventListener('click', toggleEnergyHud);
+    }
+
     // 三层切换
     els.layerBtns.forEach(function (btn) {
       btn.addEventListener('click', function () {
@@ -3806,6 +4000,7 @@
 
     // S9：恢复上次视界层级的按钮高亮 + 全局键盘快捷键
     applyLayerUI();
+    applyEnergyHudUI();
     bindKeyboardShortcuts();
     syncSidebarForViewport();
   }
@@ -4289,6 +4484,13 @@
       if (key === 'f' || key === 'F') {
         ev.preventDefault();
         toggleFocus();
+        return;
+      }
+
+      // E：一键切换 📈 势能曲线 (E) HUD 示波器
+      if (key === 'e' || key === 'E') {
+        ev.preventDefault();
+        toggleEnergyHud();
       }
     });
   }
@@ -4307,6 +4509,7 @@
     });
     restoreLastView();   // S9：恢复上次学习现场（反应卡带 + 视界层级）
     restoreStars();      // S9：恢复 ⭐ 重点攻克星标收藏夹
+    restoreEnergyHud();  // S11：恢复 📈 势能曲线 HUD 开关现场
     bindUI();
     requestAnimationFrame(loop);
   }

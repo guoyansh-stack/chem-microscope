@@ -269,6 +269,34 @@ carts.forEach(function (c) {
     }
     if (c.narration.length < 4) warn(where + '：narration 只有 ' + c.narration.length + ' 段（惯例为 4 段）');
   }
+
+  /* 3.6b energyProfile 热力学契约（S11 · 可选字段，未定义即放行） */
+  if (c.energyProfile !== undefined) {
+    var ep = c.energyProfile;
+    if (typeof ep !== 'object' || ep === null) {
+      fail(where + '：energyProfile 必须为非空对象');
+    } else {
+      if (!isNum(ep.dh)) fail(where + '：energyProfile.dh 必须为有限数值（ΔH, kJ/mol）');
+      if (!isNum(ep.ea) || ep.ea <= 0) {
+        fail(where + '：energyProfile.ea 必须为严格大于 0 的有限数值（Ea, kJ/mol）');
+      }
+      // 热力学第一性原理：吸热反应的正反应活化能必须严格大于反应焓变
+      if (isNum(ep.dh) && isNum(ep.ea) && ep.dh > 0 && !(ep.ea > ep.dh)) {
+        fail('[' + c.id + '] 违反热力学第一性原理：吸热反应 (dh=' + ep.dh + ') 的活化能 (ea=' + ep.ea + ') 必须严格大于 dh');
+      }
+      // 阿伦尼乌斯催化路径可选参数：ea_cat 须严格低于非催化活化能
+      if (ep.ea_cat !== undefined) {
+        if (!isNum(ep.ea_cat) || ep.ea_cat <= 0) {
+          fail(where + '：energyProfile.ea_cat 必须为大于 0 的有限数值');
+        } else if (!(ep.ea_cat < ep.ea)) {
+          fail(where + '：energyProfile.ea_cat (' + ep.ea_cat + ') 必须严格小于非催化活化能 ea (' + ep.ea + ')');
+        }
+      }
+      if (ep.catLabel !== undefined && !isNonEmptyStr(ep.catLabel)) {
+        fail(where + '：energyProfile.catLabel 必须为非空字符串');
+      }
+    }
+  }
 });
 
 /* ---------------------------------------------------------------------- */
@@ -359,6 +387,12 @@ function finish() {
   console.log('卡带总数：' + carts.length);
   console.log('词典词条：' + (Array.isArray(glossary) ? glossary.length : 0) +
     ' · 拓展阅读：' + (extensions ? Object.keys(extensions).length : 0));
+  var epTotal = carts.filter(function (c) { return c.energyProfile !== undefined; }).length;
+  var epCatTotal = carts.filter(function (c) {
+    return c.energyProfile !== undefined && c.energyProfile && c.energyProfile.ea_cat !== undefined;
+  }).length;
+  console.log('势能面显式标定 (energyProfile): ' + epTotal + '/' + carts.length +
+    ' 张 (含双轨催化对照: ' + epCatTotal + ' 张)');
 
   carts.forEach(function (c) {
     console.log('  [' + (c.chapter ? c.chapter.id : '?') + '] ' + c.id +

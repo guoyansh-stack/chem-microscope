@@ -463,6 +463,32 @@ body {
   opacity: 0.45;
 }
 
+/* S11：📈 势能曲线 (E) HUD 切换按钮（激活态青绿高亮） */
+.energy-hud-btn {
+  align-self: center;
+  padding: 7px 12px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text-dim);
+  font-size: 11.5px;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+.energy-hud-btn:hover {
+  border-color: rgba(100, 180, 255, 0.5);
+}
+
+.energy-hud-btn.active {
+  background: rgba(57, 230, 195, 0.16);
+  border-color: rgba(57, 230, 195, 0.65);
+  color: #39e6c3;
+  box-shadow: 0 0 10px rgba(57, 230, 195, 0.25);
+}
+
 /* 画布 */
 .viewport-wrap {
   position: relative;

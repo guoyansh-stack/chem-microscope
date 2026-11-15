@@ -69,6 +69,7 @@
     summary:
       '螺旋状铁丝在纯氧中剧烈燃烧、火星四射、生成黑色固体（Fe₃O₄），集气瓶底要铺水或细沙防止炸裂。' +
       '重点破除困惑：Fe₃O₄ 不是“八分之八价”的怪东西，而是 1 个 Fe²⁺ 与 2 个 Fe³⁺、4 个 O²⁻ 组成的混合价态离子晶体。',
+    energyProfile: { dh: -851.5, ea: 240 },
     legend: legendBase([
       { kind: 'atom', el: 'O', label: '氧原子 O（个头大、更稳重）', color: C.O },
       { kind: 'pair', label: '四氧化三铁 = 混合价态离子晶体', color: C.pair }

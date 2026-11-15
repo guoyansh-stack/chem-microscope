@@ -347,6 +347,8 @@
     summary:
       '过氧化氢（双氧水）在二氧化锰催化下迅速分解，产生大量气泡，生成水和氧气（能使带火星木条复燃）。' +
       '重点：MnO₂ 是催化剂——只帮忙降低断键门槛，自身反应前后质量和化学性质都不变。',
+    energyProfile: { dh: -98.2, ea: 75, ea_cat: 36, catLabel: 'MnO₂ 催化路径' },
+    relatedTerms: ['activation_energy'],
     legend: legendBase([
       { kind: 'atom', el: 'Mn', label: '二氧化锰 MnO₂（催化剂 · 紫色）', color: C.Mn },
       { kind: 'atom', el: 'H', label: '氢原子 H（个头小、跑得快）', color: C.H }

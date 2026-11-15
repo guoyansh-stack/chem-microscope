@@ -239,6 +239,8 @@
       '氮气与氢气在铁触媒、高温高压下合成氨，但反应永远“做不完”——正逆反应速率相等时体系进入动态平衡。' +
       '难点在 N≡N 三键键能高达 945 kJ/mol：铁催化剂表面先吸附并拉散三键（削弱键能、降低活化能），' +
       '氮氢原子在表面重组为 NH₃ 脱附；升温虽不利平衡右移（放热反应），却必须保反应速率——这就是合成氨的热力学与动力学博弈。',
+    energyProfile: { dh: -92.4, ea: 335, ea_cat: 146, catLabel: '铁触媒表面解离路径' },
+    relatedTerms: ['activation_energy'],
     legend: legendBase([
       { kind: 'atom', el: 'N', label: '氮原子 N（蓝紫 · 三键主角）', color: C.N },
       { kind: 'atom', el: 'H', label: '氢原子 H（个头小、跑得快）', color: C.H },
