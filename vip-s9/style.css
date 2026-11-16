@@ -1152,6 +1152,73 @@ body {
   line-height: 1.8;
 }
 
+/* S13-Step2 · 脑洞追问点击翻牌揭秘卡（手风琴交互） */
+.ext-followup {
+  cursor: pointer;
+  user-select: none;
+  transition: all 0.2s ease;
+}
+
+.ext-followup:hover,
+.ext-followup:focus-visible,
+.ext-followup.open {
+  border-color: rgba(250, 204, 21, 0.65);
+  background: rgba(250, 204, 21, 0.10);
+}
+
+.followup-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.followup-q {
+  flex: 1;
+  min-width: 0;
+}
+
+.followup-toggle-badge {
+  flex-shrink: 0;
+  align-self: center;
+  padding: 3px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(250, 204, 21, 0.55);
+  background: rgba(250, 204, 21, 0.14);
+  color: #facc15;
+  font-size: 11px;
+  line-height: 1.6;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+}
+
+.ext-followup:hover .followup-toggle-badge,
+.ext-followup.open .followup-toggle-badge {
+  background: rgba(250, 204, 21, 0.28);
+  border-color: rgba(250, 204, 21, 0.85);
+}
+
+.followup-answer-box {
+  display: none;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px dashed rgba(250, 204, 21, 0.35);
+  color: #e2e8f0;
+  font-size: 13.5px;
+  line-height: 1.65;
+}
+
+.ext-followup.open .followup-answer-box {
+  display: block;
+}
+
+.followup-answer-tag {
+  color: #facc15;
+  font-weight: 700;
+  margin-right: 2px;
+}
+
 .ext-hint {
   margin: 0 0 12px;
   font-size: 12px;

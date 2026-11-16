@@ -4483,6 +4483,10 @@
     els.extTitle = $('extTitle');
     els.extStory = $('extStory');
     els.extQuestion = $('extQuestion');
+    els.extFollowup = $('extFollowup');
+    els.followupToggleBadge = $('followupToggleBadge');
+    els.followupAnswerBox = $('followupAnswerBox');
+    els.extFollowupAnswer = $('extFollowupAnswer');
     els.glossaryGrid = $('glossaryGrid');
     els.termDrawer = $('termDrawer');
     els.termTitle = $('termTitle');
@@ -4780,6 +4784,24 @@
     if (els.termDrawer) els.termDrawer.hidden = true;
   }
 
+  var FOLLOWUP_BADGE_CLOSED = '🔑 点击揭晓工程底牌 ▾';
+  var FOLLOWUP_BADGE_OPEN = '▴ 收起工程底牌';
+
+  /** S13-Step2：切换脑洞追问卡的翻牌开合态 */
+  function setFollowupOpen(open) {
+    if (!els.extFollowup) return;
+    els.extFollowup.classList.toggle('open', !!open);
+    els.extFollowup.setAttribute('aria-expanded', open ? 'true' : 'false');
+    if (els.followupToggleBadge) {
+      els.followupToggleBadge.textContent = open ? FOLLOWUP_BADGE_OPEN : FOLLOWUP_BADGE_CLOSED;
+    }
+  }
+
+  function toggleFollowup() {
+    if (!els.extFollowup) return;
+    setFollowupOpen(!els.extFollowup.classList.contains('open'));
+  }
+
   /** Tab 1：当前反应的深度拓展阅读（随卡带切换实时刷新） */
   function refreshExtensionPanel() {
     var c = currentCartridge();
@@ -4792,6 +4814,11 @@
         : '本反应的拓展小剧场正在赶稿中，先去隔壁词典逛逛吧！';
     }
     if (els.extQuestion) els.extQuestion.textContent = ex ? (ex.question || '') : '';
+    // 揭秘底牌同样走词典芯片转换；切换卡带后默认折叠（先独立思考、再点击翻牌）
+    if (els.extFollowupAnswer) {
+      els.extFollowupAnswer.innerHTML = ex && ex.followUpAnswer ? linkTerms(ex.followUpAnswer) : '';
+    }
+    setFollowupOpen(false);
   }
 
   /** Tab 2：全部术语词典网格 */
@@ -4861,6 +4888,27 @@
     }
     var termCloseBtn = $('termClose');
     if (termCloseBtn) termCloseBtn.addEventListener('click', closeTermDrawer);
+
+    // S13-Step2：点击脑洞追问卡翻牌揭晓工程底牌；点词典芯片时 stopPropagation 防误触折叠
+    if (els.extFollowup) {
+      els.extFollowup.addEventListener('click', function (ev) {
+        var t = ev.target;
+        var link = t && t.closest ? t.closest('.term-link') : null;
+        if (link) {
+          ev.stopPropagation();
+          openTermDrawer(link.getAttribute('data-term'));
+          return;
+        }
+        toggleFollowup();
+      });
+      els.extFollowup.addEventListener('keydown', function (ev) {
+        if (ev.key !== 'Enter' && ev.key !== ' ') return;
+        var t = ev.target;
+        if (t && t.closest && t.closest('.term-link')) return;
+        ev.preventDefault();
+        toggleFollowup();
+      });
+    }
 
     // 初始静态解说文本也做术语高亮
     if (els.narrText) renderRichText(els.narrText, els.narrText.textContent);

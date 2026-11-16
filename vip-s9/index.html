@@ -6,7 +6,7 @@
   <meta name="robots" content="noindex,nofollow" />
   <title>初中化学 · 宏微观三层穿透显微镜</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%2312203a'/%3E%3Ccircle cx='32' cy='30' r='12' fill='%23ff6b6b'/%3E%3Ccircle cx='18' cy='44' r='7' fill='%237fd4ff'/%3E%3Ccircle cx='46' cy='44' r='7' fill='%237fd4ff'/%3E%3C/svg%3E" />
-  <link rel="stylesheet" href="style.css?v=13.1" />
+  <link rel="stylesheet" href="style.css?v=13.2" />
   <!-- VIP-S9 私享暗门：防爬 + 轻量口令锁（口令经编码比对，不含明文） -->
   <style>
     html.vip-pending .app { display: none !important; }
@@ -277,7 +277,15 @@
           <div class="ext-pane" id="extReactionPane" role="tabpanel">
             <h3 class="ext-title" id="extTitle">《科学小剧场》</h3>
             <p class="ext-story" id="extStory"></p>
-            <div class="ext-question">💭 脑洞追问：<span id="extQuestion"></span></div>
+            <div class="ext-question ext-followup" id="extFollowup" role="button" tabindex="0" aria-expanded="false" aria-controls="followupAnswerBox">
+              <div class="followup-head">
+                <div class="followup-q">💡 脑洞追问：<span id="extQuestion"></span></div>
+                <span class="followup-toggle-badge" id="followupToggleBadge">🔑 点击揭晓工程底牌 ▾</span>
+              </div>
+              <div class="followup-answer-box" id="followupAnswerBox">
+                <span class="followup-answer-tag">【第一性原理与工程底牌】</span><span id="extFollowupAnswer"></span>
+              </div>
+            </div>
           </div>
 
           <div class="ext-pane hidden" id="extGlossaryPane" role="tabpanel">
@@ -288,7 +296,7 @@
 
         <footer class="footer">
           Rock Lab 认知实验室 · S13 学术满配版（26卡带全实测势能面） · 纯 HTML5 Canvas 零依赖 · 双击即用<br />
-          架构：engine.js 五层防遮挡引擎 + 26 张标准反应卡带（含高中电化学/平衡/配位与定量专训） + 15 项物理化学显微镜 + 26 篇现代工程拓展
+          架构：engine.js 五层防遮挡引擎 + 26 张标准反应卡带（含高中电化学/平衡/配位与定量专训） + 18 项物理化学显微镜 + 26 组工程脑洞揭秘
         </footer>
       </div>
     </div>
@@ -320,14 +328,14 @@
   </div>
 
   <!-- 数据先行（卡带注册表），引擎最后加载 -->
-  <script src="data/ch1_water.js?v=13.1"></script>
-  <script src="data/ch2_5_grade8_core.js?v=13.1"></script>
-  <script src="data/ch2_oxygen_carbon.js?v=13.1"></script>
-  <script src="data/ch3_metals.js?v=13.1"></script>
-  <script src="data/ch4_acids_bases_salts.js?v=13.1"></script>
-  <script src="data/ch5_highschool_leap.js?v=13.1"></script>
-  <script src="data/ch6_stoichiometry_quant.js?v=13.1"></script>
-  <script src="data/glossary_extensions.js?v=13.1"></script>
-  <script src="engine.js?v=13.1"></script>
+  <script src="data/ch1_water.js?v=13.2"></script>
+  <script src="data/ch2_5_grade8_core.js?v=13.2"></script>
+  <script src="data/ch2_oxygen_carbon.js?v=13.2"></script>
+  <script src="data/ch3_metals.js?v=13.2"></script>
+  <script src="data/ch4_acids_bases_salts.js?v=13.2"></script>
+  <script src="data/ch5_highschool_leap.js?v=13.2"></script>
+  <script src="data/ch6_stoichiometry_quant.js?v=13.2"></script>
+  <script src="data/glossary_extensions.js?v=13.2"></script>
+  <script src="engine.js?v=13.2"></script>
 </body>
 </html>

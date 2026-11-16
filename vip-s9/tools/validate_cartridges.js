@@ -364,6 +364,12 @@ if (!extensions || typeof extensions !== 'object') {
     if (!isNonEmptyStr(ex.title)) fail(ew + '：title 不能为空');
     if (!isNonEmptyStr(ex.story)) fail(ew + '：story 不能为空');
     if (!isNonEmptyStr(ex.question)) fail(ew + '：question 不能为空');
+    // S13-Step2：脑洞追问揭秘底牌强制契约（缺失或过短直接 FAIL）
+    if (!isNonEmptyStr(ex.followUpAnswer)) {
+      fail(ew + '：followUpAnswer 不能为空（S13 脑洞追问揭秘底牌）');
+    } else if (ex.followUpAnswer.trim().length < 40) {
+      fail(ew + '：followUpAnswer 长度 ' + ex.followUpAnswer.trim().length + ' < 40 字符');
+    }
     if (isNonEmptyStr(ex.story)) {
       ['【工程放大量级与核心工况】', '【微观机理的工程化制约】', '【跨学科前沿与系统工程映射】'].forEach(function (h) {
         if (ex.story.indexOf(h) < 0) fail(ew + '：story 缺少三层拆解段落标题 ' + h);
@@ -409,6 +415,10 @@ function finish() {
   }).length;
   console.log('势能面显式标定 (energyProfile): ' + epTotal + '/' + carts.length +
     ' 张 (含双轨催化对照: ' + epCatTotal + ' 张)');
+  var fuTotal = carts.filter(function (c) {
+    return extensions && extensions[c.id] && isNonEmptyStr(extensions[c.id].followUpAnswer);
+  }).length;
+  console.log('脑洞追问揭秘底牌 (followUpAnswer): ' + fuTotal + '/' + carts.length + ' 篇');
 
   carts.forEach(function (c) {
     console.log('  [' + (c.chapter ? c.chapter.id : '?') + '] ' + c.id +
