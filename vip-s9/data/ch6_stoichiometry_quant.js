@@ -51,7 +51,7 @@
       { kind: 'bond', label: '化学键 = 手拉手', color: C.bond },
       { kind: 'pair', label: '共用电子对', color: C.pair },
       { kind: 'electron', label: '电子（e⁻）', color: C.electron },
-      { kind: 'ion', label: '离子键 = 虚线静电引力（得失电子）', color: C.ion }
+      { kind: 'ion', label: '静电吸引 / 离子作用 = 虚线（得失电子与电性吸引）', color: C.ion }
     ];
     return (extra || []).concat(list);
   }

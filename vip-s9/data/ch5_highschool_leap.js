@@ -51,7 +51,7 @@
       { kind: 'bond', label: '化学键 = 手拉手', color: C.bond },
       { kind: 'pair', label: '共用电子对', color: C.pair },
       { kind: 'electron', label: '电子（e⁻）', color: C.electron },
-      { kind: 'ion', label: '离子键 = 虚线静电引力（得失电子）', color: C.ion }
+      { kind: 'ion', label: '静电吸引 / 离子作用 = 虚线（得失电子与电性吸引）', color: C.ion }
     ];
     return (extra || []).concat(list);
   }
@@ -74,6 +74,12 @@
       '锌片与铜片插在硫酸铜溶液里、用导线连上电流表：锌片逐渐溶解，铜片上析出红亮的铜，电流表指针稳稳偏转。' +
       '微观上 Zn 失去 2 个电子并不直接塞给身边 Cu²⁺，而是经外电路定向流到铜极，Cu²⁺ 在铜极表面得电子还原——' +
       '电子走“空间解耦”的路，把氧化与还原拆到两极，化学能便以电功形式输出（ΔG = -nFE）。',
+    energyProfile: {
+      dh: -218.7,
+      ea: 55,
+      reactionType: 'exothermic',
+      curveLabel: '显著放热 · ΔE° = +1.10 V 电势差驱动电子经外电路定向迁移'
+    },
     legend: legendBase([
       { kind: 'atom', el: 'Zn', label: '锌原子 Zn（银白 · 失电子主角）', color: C.Zn },
       { kind: 'atom', el: 'Cu', label: '铜原子 Cu（紫红 · 得电子主角）', color: C.Cu },
@@ -396,6 +402,12 @@
       '黄绿色氯气溶于水得到氯水：一部分氯升为 +1 价（HClO），一部分降为 -1 价（HCl），同一种元素自己氧化自己。' +
       '微观上是非极性 Cl₂ 分子受极性水分子诱导发生不对称异裂——次氯酸的强氧化性正是 84 消毒液漂白杀菌的核心；' +
       '反过来 84 与酸性清洁剂混用，HCl 与 HClO 归中回 Cl₂，就是氯气中毒事故的化学热力学溯源。',
+    energyProfile: {
+      dh: -25.1,
+      ea: 52,
+      reactionType: 'exothermic',
+      curveLabel: '可逆微放热歧化 · Cl-Cl 键异裂生成盐酸与次氯酸'
+    },
     legend: legendBase([
       { kind: 'atom', el: 'Cl', label: '氯原子 Cl（青绿 · 歧化主角）', color: C.Cl },
       { kind: 'atom', el: 'O', label: '氧原子 O（水与次氯酸的骨架）', color: C.O },
@@ -547,6 +559,12 @@
       '向浅蓝色硫酸铜溶液滴加氨水：先出现浅蓝色沉淀（氢氧化铜），继续滴加沉淀神奇溶解，溶液变成深邃的宝石蓝。' +
       '微观上是 NH₃ 的氮原子端着孤对电子，塞进 Cu²⁺ 的空轨道，形成四氨合铜络离子的配位键——' +
       '四个 NH₃ 像卫星一样锁定铜离子，几何构型精妙，这正是配位化学的入门级名场面。',
+    energyProfile: {
+      dh: -88.0,
+      ea: 26,
+      reactionType: 'exothermic',
+      curveLabel: '配位成键放热 · NH₃ 孤对电子填入 Cu²⁺ 空轨道显著降能'
+    },
     legend: legendBase([
       { kind: 'atom', el: 'Cu', label: '铜离子 Cu²⁺（紫红 · 空轨道中心）', color: C.Cu },
       { kind: 'atom', el: 'N', label: '氮原子 N（蓝紫 · 孤对电子供体）', color: C.N },

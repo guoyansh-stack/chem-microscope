@@ -46,7 +46,7 @@
     var list = [
       { kind: 'atom', el: 'Fe', label: '铁原子 Fe（钢灰色金属）', color: C.Fe },
       { kind: 'bond', label: '化学键 = 手拉手', color: C.bond },
-      { kind: 'ion', label: '离子键 = 虚线静电引力（得失电子）', color: C.ion },
+      { kind: 'ion', label: '静电吸引 / 离子作用 = 虚线（得失电子与电性吸引）', color: C.ion },
       { kind: 'electron', label: '电子', color: C.electron }
     ];
     return (extra || []).concat(list);
@@ -268,6 +268,12 @@
     summary:
       '银白色铁钉浸入稀盐酸，表面缓慢产生气泡，溶液由无色逐渐变成浅绿色（Fe²⁺ 的特征色）。' +
       '重点：温和的 H⁺ 只能“要走”铁的 2 个电子，生成浅绿色 Fe²⁺；换成氧气、氯气这类强氧化剂，才能逼铁交出 3 个电子变成黄色 Fe³⁺。',
+    energyProfile: {
+      dh: -87.9,
+      ea: 68,
+      reactionType: 'exothermic',
+      curveLabel: '温和放热 · H⁺ 氧化电势受限，仅夺取 Fe 的 2 个价电子'
+    },
     legend: legendBase([
       { kind: 'atom', el: 'H', label: '氢原子 H（盐酸里的 H⁺ 前身）', color: C.H },
       { kind: 'atom', el: 'Cl', label: '氯离子 Cl⁻（观众离子 · 全程旁观）', color: C.Cl },
@@ -418,6 +424,12 @@
       '红棕色氧化铁（Fe₂O₃）在高温下被一氧化碳夺走氧，逐渐变成能被磁铁吸引的黑色铁粉；' +
       '尾气使澄清石灰水变浑浊，且尾气必须点燃处理（CO 有毒）。' +
       '重点：还原反应 = 夺氧大战——3 个 CO 像拆迁队逐个夺走 3 个 O，Fe³⁺ 重新拿回电子变回 Fe 原子。',
+    energyProfile: {
+      dh: -24.8,
+      ea: 165,
+      reactionType: 'exothermic',
+      curveLabel: '高温跨越极高断键能垒 · 总体呈温和放热'
+    },
     legend: legendBase([
       { kind: 'atom', el: 'C', label: '碳原子 C（CO 里的夺氧能手）', color: C.C },
       { kind: 'atom', el: 'O', label: '氧原子 O（被争夺的对象）', color: C.O },
@@ -574,6 +586,12 @@
       '银白色铁钉浸入蓝色硫酸铜溶液，表面逐渐覆盖一层紫红色物质（铜），' +
       '蓝色溶液（Cu²⁺）慢慢变成浅绿色（Fe²⁺）。' +
       '重点：金属活动性顺序（Fe > Cu）的微观本质——Fe 原子比 Cu²⁺ 更愿意交出电子，强行塞给它 2 个电子。',
+    energyProfile: {
+      dh: -152.3,
+      ea: 48,
+      reactionType: 'exothermic',
+      curveLabel: '显著放热 · ΔE° = +0.78 V 电势差驱动自发电子转移'
+    },
     legend: legendBase([
       { kind: 'atom', el: 'Cu', label: '铜原子 Cu（紫红色）', color: C.Cu },
       { kind: 'atom', el: 'S', label: '硫酸根 SO₄²⁻（离子团 · 全程旁观）', color: C.S },

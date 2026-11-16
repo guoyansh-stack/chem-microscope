@@ -64,6 +64,12 @@
       '红磷在密闭集气瓶内燃烧，产生大量白烟（P₂O₅ 固体小颗粒）；冷却后打开止水夹，' +
       '烧杯中的水倒吸入集气瓶，水面上升约占瓶内空气体积的 1/5——这就是空气中氧气的体积分数。' +
       '微观真相：O₂ 被消耗成固体沉降，瓶内气体分子数减少 1/5，压强变小，外界大气压把水压进来。',
+    energyProfile: {
+      dh: -1492.0,
+      ea: 115,
+      reactionType: 'exothermic',
+      curveLabel: '剧烈放热 · 形成稳定 P-O 键释放巨量晶格能'
+    },
     legend: [
       { kind: 'atom', el: 'P', label: '红磷原子 P（暗红固体小球）', color: C.P },
       { kind: 'atom', el: 'O', label: '氧原子 O（被 P 夺走的主角）', color: C.O },
@@ -243,6 +249,12 @@
       '随后加热试管，气泡逸出，红色溶液又变回紫色（H₂CO₃ →△→ H₂O + CO₂↑）。' +
       '破除经典误区：不是 CO₂ 本身呈酸性，而是 CO₂ 与 H₂O 结合成 H₂CO₃，' +
       '碳酸电离出微量 H⁺ 才让石蕊变红。',
+    energyProfile: {
+      dh: -20.4,
+      ea: 38,
+      reactionType: 'exothermic',
+      curveLabel: '温和可逆放热 · 极低能垒的亲核水合平衡'
+    },
     legend: [
       { kind: 'atom', el: 'C', label: '碳原子 C（CO₂ 与 H₂CO₃ 的骨架）', color: C.C },
       { kind: 'atom', el: 'O', label: '氧原子 O（水与碳酸的核心）', color: C.O },
@@ -398,12 +410,18 @@
       '无色 CO₂ 气体通入澄清透明的石灰水中，溶液迅速产生白色浑浊（CaCO₃ 沉淀）。' +
       '这是八年级唯一必考沉淀，也是检验 CO₂ 的特征反应。' +
       '微观过程：CO₂ 转化为 CO₃²⁻ 原子团，随即与 Ca²⁺ 被静电引力锁死成不溶于水的 CaCO₃ 晶格。',
+    energyProfile: {
+      dh: -113.2,
+      ea: 32,
+      reactionType: 'exothermic',
+      curveLabel: '放热沉淀 · 离子低能垒结合析出 CaCO₃ 晶格'
+    },
     legend: [
       { kind: 'atom', el: 'Ca', label: '钙离子 Ca²⁺（锁死成晶格的主角）', color: C.Ca },
       { kind: 'atom', el: 'C', label: '碳原子 C（CO₃²⁻ 原子团核心）', color: C.C },
       { kind: 'atom', el: 'O', label: '氧原子 O（CO₃²⁻ 与 H₂O 的骨架）', color: C.O },
       { kind: 'atom', el: 'H', label: '氢原子 H（生成 H₂O）', color: C.H },
-      { kind: 'ionic', label: '离子键 = 虚线静电引力（锁死成沉淀）', color: C.ionic },
+      { kind: 'ionic', label: '静电吸引 / 离子作用 = 虚线（得失电子与电性吸引）', color: C.ionic },
       { kind: 'bond', label: '共价键 = 手拉手', color: C.bond }
     ],
 

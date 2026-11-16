@@ -67,6 +67,12 @@
     summary:
       '黑色木炭在氧气中剧烈燃烧、发出白光、放出大量热，生成能使澄清石灰水变浑浊的气体（二氧化碳）。' +
       '微观上是碳原子挣脱晶格、与氧分子碰撞，旧键断裂后重组为 O=C=O 的二氧化碳分子。',
+    energyProfile: {
+      dh: -393.5,
+      ea: 150,
+      reactionType: 'exothermic',
+      curveLabel: '强放热 · C=O 双键键能极高，点火越垒后剧烈发光发热'
+    },
     legend: legendBase([
       { kind: 'atom', el: 'C', label: '碳原子 C（木炭里的黑色小球）', color: C.C }
     ]),
@@ -207,9 +213,15 @@
     summary:
       '银白色镁条点燃后发出耀眼白光、放出大量热，生成白色固体氧化镁（MgO）。' +
       '重点：这是典型的离子键——镁原子把最外层 2 个电子“送”给氧原子，变成 Mg²⁺ 和 O²⁻，靠静电引力结合。',
+    energyProfile: {
+      dh: -601.6,
+      ea: 138,
+      reactionType: 'exothermic',
+      curveLabel: '强放热 · 高晶格能 MgO 驱动耀眼白光辐射'
+    },
     legend: legendBase([
       { kind: 'atom', el: 'Mg', label: '镁原子 Mg（银白色金属）', color: C.Mg },
-      { kind: 'ion', label: '离子键 = 虚线静电引力（得失电子）', color: C.ion }
+      { kind: 'ion', label: '静电吸引 / 离子作用 = 虚线（得失电子与电性吸引）', color: C.ion }
     ]),
 
     /* ---------------- L1 宏观实验台 ---------------- */
@@ -509,6 +521,12 @@
     summary:
       '白色大理石（碳酸钙）遇到稀盐酸，表面冒出大量气泡，生成氯化钙、水和二氧化碳（使澄清石灰水变浑浊）。' +
       '微观真相：溶液里的离子“换舞伴”，生成的碳酸极不稳定，瞬间分解成水和二氧化碳。',
+    energyProfile: {
+      dh: -15.2,
+      ea: 45,
+      reactionType: 'exothermic',
+      curveLabel: '微放热 · H₂CO₃ 分解逸出 CO₂ 气体造成巨大的熵增驱动'
+    },
     legend: legendBase([
       { kind: 'atom', el: 'Ca', label: '钙原子 Ca（大理石里的金属）', color: C.Ca },
       { kind: 'atom', el: 'C', label: '碳原子 C（碳酸根的中心）', color: C.C },

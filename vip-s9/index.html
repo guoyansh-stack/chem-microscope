@@ -6,7 +6,7 @@
   <meta name="robots" content="noindex,nofollow" />
   <title>初中化学 · 宏微观三层穿透显微镜</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%2312203a'/%3E%3Ccircle cx='32' cy='30' r='12' fill='%23ff6b6b'/%3E%3Ccircle cx='18' cy='44' r='7' fill='%237fd4ff'/%3E%3Ccircle cx='46' cy='44' r='7' fill='%237fd4ff'/%3E%3C/svg%3E" />
-  <link rel="stylesheet" href="style.css?v=12.0" />
+  <link rel="stylesheet" href="style.css?v=13.1" />
   <!-- VIP-S9 私享暗门：防爬 + 轻量口令锁（口令经编码比对，不含明文） -->
   <style>
     html.vip-pending .app { display: none !important; }
@@ -114,7 +114,7 @@
       </div>
 
       <!-- S9：桌面端键盘快捷键提示徽章 -->
-      <div class="kbd-hints" title="空格=播放/暂停 · ←/→=时间轴±5%（Shift=±1%） · 1/2/3=L1/L2/L3视界 · F=聚焦反应实质 · E=势能曲线HUD · Esc=关闭概念显微镜">
+      <div class="kbd-hints" title="空格=播放/暂停 · ←/→=时间轴±5%（Shift=±1%） · 1/2/3=L1/L2/L3视界 · F=聚焦反应实质 · E=聚焦势能面面板 · Esc=关闭概念显微镜">
         <span class="kbd-tag">⌨ 快捷键</span>
         <span class="kbd-chip"><kbd>空格</kbd>播放</span>
         <span class="kbd-chip"><kbd>←</kbd><kbd>→</kbd>步进</span>
@@ -172,8 +172,8 @@
                 <span class="ft-switch" aria-hidden="true"></span>
                 <span class="ft-text">🎯 聚焦反应实质（弱化旁观粒子）</span>
               </label>
-              <button id="btn-energy-hud" class="energy-hud-btn active" type="button" aria-pressed="true"
-                      title="切换 Canvas 右上角「📈 势能曲线 (E)」实时 HUD 示波器（快捷键 E）">📈 势能曲线</button>
+              <button id="btn-energy-hud" class="energy-hud-btn" type="button"
+                      title="平滑滚动并高亮聚焦右侧「反应势能面与动力学 (PES)」面板（快捷键 E）">📈 势能曲线</button>
             </div>
 
             <div class="viewport-wrap">
@@ -192,7 +192,7 @@
           <!-- 右：解说与图例 -->
           <aside class="side">
             <section class="panel card narr">
-              <h2><span class="dot"></span>人话解说卡片</h2>
+              <h2><span class="dot"></span>微观机理直译</h2>
               <div class="narr-phase-row">
                 <div id="narrPhase">进度 0%</div>
               </div>
@@ -270,7 +270,7 @@
             <h2><span class="dot" style="background:#4dd0e1;box-shadow:0 0 10px #4dd0e1"></span>🚀 拓展阅读与概念词典</h2>
             <div class="ext-tabs" role="tablist" aria-label="拓展阅读与词典切换">
               <button class="ext-tab active" data-ext-tab="reaction" type="button" role="tab">🚀 本反应科学拓展</button>
-              <button class="ext-tab" data-ext-tab="glossary" type="button" role="tab">📖 八年级微观黑话词典</button>
+              <button class="ext-tab" data-ext-tab="glossary" type="button" role="tab">📖 核心物理化学词典</button>
             </div>
           </div>
 
@@ -287,8 +287,8 @@
         </section>
 
         <footer class="footer">
-          Rock Lab 认知实验室 · S12 定量化学计量与势能面满配版（26卡带） · 纯 HTML5 Canvas 零依赖 · 双击即用<br />
-          架构：engine.js 五层防遮挡引擎 + 26 张标准反应卡带（含高中电化学/平衡/配位与定量专训） + 18 项物理化学显微镜 + 26 篇现代工程拓展
+          Rock Lab 认知实验室 · S13 学术满配版（26卡带全实测势能面） · 纯 HTML5 Canvas 零依赖 · 双击即用<br />
+          架构：engine.js 五层防遮挡引擎 + 26 张标准反应卡带（含高中电化学/平衡/配位与定量专训） + 15 项物理化学显微镜 + 26 篇现代工程拓展
         </footer>
       </div>
     </div>
@@ -320,14 +320,14 @@
   </div>
 
   <!-- 数据先行（卡带注册表），引擎最后加载 -->
-  <script src="data/ch1_water.js?v=12.0"></script>
-  <script src="data/ch2_5_grade8_core.js?v=12.0"></script>
-  <script src="data/ch2_oxygen_carbon.js?v=12.0"></script>
-  <script src="data/ch3_metals.js?v=12.0"></script>
-  <script src="data/ch4_acids_bases_salts.js?v=12.0"></script>
-  <script src="data/ch5_highschool_leap.js?v=12.0"></script>
-  <script src="data/ch6_stoichiometry_quant.js?v=12.0"></script>
-  <script src="data/glossary_extensions.js?v=12.0"></script>
-  <script src="engine.js?v=12.0"></script>
+  <script src="data/ch1_water.js?v=13.1"></script>
+  <script src="data/ch2_5_grade8_core.js?v=13.1"></script>
+  <script src="data/ch2_oxygen_carbon.js?v=13.1"></script>
+  <script src="data/ch3_metals.js?v=13.1"></script>
+  <script src="data/ch4_acids_bases_salts.js?v=13.1"></script>
+  <script src="data/ch5_highschool_leap.js?v=13.1"></script>
+  <script src="data/ch6_stoichiometry_quant.js?v=13.1"></script>
+  <script src="data/glossary_extensions.js?v=13.1"></script>
+  <script src="engine.js?v=13.1"></script>
 </body>
 </html>

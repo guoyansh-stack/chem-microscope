@@ -284,8 +284,10 @@ carts.forEach(function (c) {
     if (c.narration.length < 4) warn(where + '：narration 只有 ' + c.narration.length + ' 段（惯例为 4 段）');
   }
 
-  /* 3.6b energyProfile 热力学契约（S11 · 可选字段，未定义即放行） */
-  if (c.energyProfile !== undefined) {
+  /* 3.6b energyProfile 热力学契约（S13 · 26/26 强制全量标定，缺失即判失败） */
+  if (c.energyProfile === undefined) {
+    fail(where + '：缺少 energyProfile（S13 水位线：全库 26/26 张卡带必须显式标定势能面）');
+  } else {
     var ep = c.energyProfile;
     if (typeof ep !== 'object' || ep === null) {
       fail(where + '：energyProfile 必须为非空对象');

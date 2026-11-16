@@ -45,7 +45,7 @@
   function legendBase(extra) {
     var list = [
       { kind: 'bond', label: '共价键 = 手拉手（真凶成键）', color: C.bond },
-      { kind: 'ion', label: '离子键 = 虚线静电引力（锁死成沉淀）', color: C.ion },
+      { kind: 'ion', label: '静电吸引 / 离子作用 = 虚线（得失电子与电性吸引）', color: C.ion },
       { kind: 'pair', label: '观众离子 = 全程旁观不参与', color: C.pair }
     ];
     return (extra || []).concat(list);
@@ -68,6 +68,12 @@
     summary:
       '滴有酚酞的氢氧化钠溶液呈红色，逐滴加入稀盐酸并搅拌，溶液在恰好完全反应时由红色突变为无色，温度计显示微热（放热）。' +
       '核心秘密：Na⁺ 与 Cl⁻ 全程在水中游荡、反应前后没有任何变化（观众离子）；真正的微观动作只有 H⁺ 与 OH⁻ 一见钟情，结合成共价键的 H₂O 分子。',
+    energyProfile: {
+      dh: -57.3,
+      ea: 16,
+      reactionType: 'exothermic',
+      curveLabel: '极低能垒离子复合 · 强酸强碱中和瞬间放热'
+    },
     legend: legendBase([
       { kind: 'atom', el: 'H', label: '氢原子 H（H⁺ 与 OH⁻ 的主角）', color: C.H },
       { kind: 'atom', el: 'O', label: '氧原子 O（OH⁻ 与 H₂O 的核心）', color: C.O },
@@ -213,6 +219,12 @@
     summary:
       '向蓝色的硫酸铜溶液中滴加无色氢氧化钠溶液，瞬间生成蓝色絮状沉淀（Cu(OH)₂），上层溶液蓝色褪去变无色。' +
       '核心秘密：Na⁺ 与 SO₄²⁻ 全程旁观；水中的 Cu²⁺ 遇到 2 个 OH⁻ 后，静电引力将它们牢牢锁死并聚集成团下沉——直观展示复分解反应发生的条件之一：“有沉淀生成”。',
+    energyProfile: {
+      dh: -66.5,
+      ea: 18,
+      reactionType: 'exothermic',
+      curveLabel: '极低能垒复分解 · 溶液中离子碰撞瞬时成核沉淀'
+    },
     legend: legendBase([
       { kind: 'atom', el: 'Cu', label: '铜离子 Cu²⁺（蓝色 · 被锁死的主角）', color: C.Cu },
       { kind: 'atom', el: 'O', label: '氧原子 O（OH⁻ 与 SO₄²⁻ 的骨架）', color: C.O },
@@ -394,6 +406,12 @@
       '两种无色透明溶液混合，瞬间产生大量白色沉淀（BaSO₄），加稀硝酸沉淀也不溶解。' +
       '核心秘密：Na⁺ 与 Cl⁻ 旁观；Ba²⁺ 与 SO₄²⁻ 原子团一旦碰撞即紧密结合成极难电离的 BaSO₄ 晶格沉入底部——' +
       '所以检验 SO₄²⁻ 要用 Ba²⁺（BaSO₄ 既不溶于水也不溶于酸），而不能用 AgNO₃（Ag₂SO₄ 微溶会干扰）。',
+    energyProfile: {
+      dh: -26.3,
+      ea: 24,
+      reactionType: 'exothermic',
+      curveLabel: '放热沉淀 · Ba²⁺ 与 SO₄²⁻ 瞬间锁进极难电离晶格'
+    },
     legend: legendBase([
       { kind: 'atom', el: 'Ba', label: '钡离子 Ba²⁺（主角 · 锁死 SO₄²⁻）', color: C.Ba },
       { kind: 'atom', el: 'S', label: '硫酸根 SO₄²⁻（被锁的离子团）', color: C.S },
@@ -561,6 +579,12 @@
       '向碳酸钠粉末/溶液中加入稀盐酸，瞬间剧烈冒出大量气泡（对比第 2 章块状大理石的平缓产气）。' +
       '实验室制 CO₂ 不用纯碱粉末，因为反应太快难以收集。' +
       '核心秘密：Na⁺ 和 Cl⁻ 旁观；CO₃²⁻ 已经在水中自由游离（无需像 CaCO₃ 那样先拆解固体晶格），2 个 H⁺ 直接扑向 CO₃²⁻ 结合成不稳定的 H₂CO₃，随即瞬间断裂为 H₂O 和 CO₂↑ 飞出液面。',
+    energyProfile: {
+      dh: -2.2,
+      ea: 40,
+      reactionType: 'exothermic',
+      curveLabel: '近乎热中性 · H₂CO₃ 分解释放 CO₂ 的巨大熵增驱动'
+    },
     legend: legendBase([
       { kind: 'atom', el: 'C', label: '碳原子 C（碳酸根的中心）', color: C.C },
       { kind: 'atom', el: 'O', label: '氧原子 O（碳酸根与产物的骨架）', color: C.O },

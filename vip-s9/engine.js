@@ -3708,11 +3708,9 @@
     // S6：聚焦模式下旁观粒子降噪（仅 L2/L3）
     var spec = state.focus ? computeSpectators(cartridge, 'atomic') : {};
 
-    // 先量出底部结论框高度，收敛出中间纯净绘制带
-    var wrap = at.takeaway ? wrapText(at.takeaway, viewW - 80) : [];
-    var boxH = wrap.length ? 26 + wrap.length * 20 : 0;
+    // 底部净空只保留相位条带，全部让位给微观粒子热运动与电子轨迹
     safe.top = TITLE_ZONE;
-    safe.bottom = PHASE_BAR_ZONE + 2 + boxH + (boxH > 0 ? SAFE_GAP : 0);
+    safe.bottom = PHASE_BAR_ZONE + 2;
 
     // ① 背景网格 / 光晕
     var bg = ctx.createRadialGradient(viewW / 2, viewH / 2, 20, viewW / 2, viewH / 2, viewW * 0.8);
@@ -3823,29 +3821,9 @@
       if (!a.catalyst) drawShellElectrons(a, pos[a.id], t, time, spec[a.id] ? SPECTATOR_ALPHA : 1);
     });
 
-    // ⑤ HUD：左上角层标题 + 底部结论框（独立底带，内容区零重叠）
+    // ⑤ HUD：左上角层标题
     drawText('L3 · 原子 / 电子重排层', 22, 28, 15, '#ffe082', 'left', 0.9);
     drawText('看得见：价电子 · 共用电子对 · 化合价的由来', 22, 52, 12, '#a99bd8', 'left', 0.85);
-    if (boxH > 0) {
-      ctx.save();
-      ctx.globalAlpha = 0.92;
-      ctx.font = '600 14px "Microsoft YaHei", "PingFang SC", sans-serif';
-      var boxTop = viewH - PHASE_BAR_ZONE - 2 - boxH;
-      roundRectPath(28, boxTop, viewW - 56, boxH, 12);
-      ctx.fillStyle = 'rgba(10,18,32,0.82)';
-      ctx.fill();
-      ctx.strokeStyle = 'rgba(255,224,130,0.4)';
-      ctx.lineWidth = 1.3;
-      ctx.stroke();
-      ctx.fillStyle = '#ffe9b8';
-      ctx.textAlign = 'left';
-      ctx.textBaseline = 'top';
-      for (var i = 0; i < wrap.length; i++) {
-        ctx.fillText(wrap[i], 48, boxTop + 14 + i * 20);
-      }
-      ctx.restore();
-      ctx.globalAlpha = 1;
-    }
 
     // 标注（限时显示：淡入后自动淡出，避免叠字）→ 入队，随⑤置顶
     (at.labels || []).forEach(function (lb) {
@@ -3922,23 +3900,6 @@
       var fade = windowT(t, ionFrom, ionFrom + 0.05) * d;
       drawPill(x, y + maxR + 24, atom.ion.label, '#ffd54f', fade);
     }
-  }
-
-  function wrapText(text, maxWidth) {
-    ctx.font = '600 14px "Microsoft YaHei", "PingFang SC", sans-serif';
-    var lines = [];
-    var line = '';
-    for (var i = 0; i < text.length; i++) {
-      var test = line + text[i];
-      if (ctx.measureText(test).width > maxWidth && line) {
-        lines.push(line);
-        line = text[i];
-      } else {
-        line = test;
-      }
-    }
-    if (line) lines.push(line);
-    return lines;
   }
 
   /* ====================================================================== */
