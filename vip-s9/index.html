@@ -6,7 +6,7 @@
   <meta name="robots" content="noindex,nofollow" />
   <title>初中化学 · 宏微观三层穿透显微镜</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%2312203a'/%3E%3Ccircle cx='32' cy='30' r='12' fill='%23ff6b6b'/%3E%3Ccircle cx='18' cy='44' r='7' fill='%237fd4ff'/%3E%3Ccircle cx='46' cy='44' r='7' fill='%237fd4ff'/%3E%3C/svg%3E" />
-  <link rel="stylesheet" href="style.css?v=13.2" />
+  <link rel="stylesheet" href="style.css?v=14.0" />
   <!-- VIP-S9 私享暗门：防爬 + 轻量口令锁（口令经编码比对，不含明文） -->
   <style>
     html.vip-pending .app { display: none !important; }
@@ -114,13 +114,14 @@
       </div>
 
       <!-- S9：桌面端键盘快捷键提示徽章 -->
-      <div class="kbd-hints" title="空格=播放/暂停 · ←/→=时间轴±5%（Shift=±1%） · 1/2/3=L1/L2/L3视界 · F=聚焦反应实质 · E=聚焦势能面面板 · Esc=关闭概念显微镜">
+      <div class="kbd-hints" title="空格=播放/暂停 · ←/→=时间轴±5%（Shift=±1%） · 1/2/3=L1/L2/L3视界 · F=聚焦反应实质 · Q=量子电子云 · E=聚焦势能面面板 · Esc=关闭概念显微镜">
         <span class="kbd-tag">⌨ 快捷键</span>
         <span class="kbd-chip"><kbd>空格</kbd>播放</span>
         <span class="kbd-chip"><kbd>←</kbd><kbd>→</kbd>步进</span>
         <span class="kbd-chip"><kbd>Shift</kbd>精调</span>
         <span class="kbd-chip"><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd>视界</span>
         <span class="kbd-chip"><kbd>F</kbd>聚焦</span>
+        <span class="kbd-chip"><kbd>Q</kbd>量子云</span>
         <span class="kbd-chip"><kbd>E</kbd>势能</span>
         <span class="kbd-chip"><kbd>Esc</kbd>关词典</span>
       </div>
@@ -172,6 +173,7 @@
                 <span class="ft-switch" aria-hidden="true"></span>
                 <span class="ft-text">🎯 聚焦反应实质（弱化旁观粒子）</span>
               </label>
+              <button class="focus-toggle" id="quantum-toggle" type="button" title="切换玻尔行星模型与薛定谔量子电子云概率密度视图 (快捷键 Q)">⚛️ 量子电子云 (|ψ|²)</button>
               <button id="btn-energy-hud" class="energy-hud-btn" type="button"
                       title="平滑滚动并高亮聚焦右侧「反应势能面与动力学 (PES)」面板（快捷键 E）">📈 势能曲线</button>
             </div>
@@ -201,6 +203,7 @@
                 氢气分子（H₂）和氧气分子（O₂）在容器里自由漂浮。
                 它们各自“手拉手”（化学键）结合得很稳，暂时谁也不理谁。
               </p>
+              <div id="quantumTruth" class="quantum-truth" hidden></div>
             </section>
 
             <section class="panel card">
@@ -296,7 +299,7 @@
 
         <footer class="footer">
           Rock Lab 认知实验室 · S13 学术满配版（26卡带全实测势能面） · 纯 HTML5 Canvas 零依赖 · 双击即用<br />
-          架构：engine.js 五层防遮挡引擎 + 26 张标准反应卡带（含高中电化学/平衡/配位与定量专训） + 18 项物理化学显微镜 + 26 组工程脑洞揭秘
+          架构：engine.js 五层防遮挡引擎 + 26 张标准反应卡带（含高中电化学/平衡/配位与定量专训） + 20 项物理化学显微镜（含薛定谔量子电子云透视） + 26 组工程脑洞揭秘
         </footer>
       </div>
     </div>
@@ -328,14 +331,14 @@
   </div>
 
   <!-- 数据先行（卡带注册表），引擎最后加载 -->
-  <script src="data/ch1_water.js?v=13.2"></script>
-  <script src="data/ch2_5_grade8_core.js?v=13.2"></script>
-  <script src="data/ch2_oxygen_carbon.js?v=13.2"></script>
-  <script src="data/ch3_metals.js?v=13.2"></script>
-  <script src="data/ch4_acids_bases_salts.js?v=13.2"></script>
-  <script src="data/ch5_highschool_leap.js?v=13.2"></script>
-  <script src="data/ch6_stoichiometry_quant.js?v=13.2"></script>
-  <script src="data/glossary_extensions.js?v=13.2"></script>
-  <script src="engine.js?v=13.2"></script>
+  <script src="data/ch1_water.js?v=14.0"></script>
+  <script src="data/ch2_5_grade8_core.js?v=14.0"></script>
+  <script src="data/ch2_oxygen_carbon.js?v=14.0"></script>
+  <script src="data/ch3_metals.js?v=14.0"></script>
+  <script src="data/ch4_acids_bases_salts.js?v=14.0"></script>
+  <script src="data/ch5_highschool_leap.js?v=14.0"></script>
+  <script src="data/ch6_stoichiometry_quant.js?v=14.0"></script>
+  <script src="data/glossary_extensions.js?v=14.0"></script>
+  <script src="engine.js?v=14.0"></script>
 </body>
 </html>

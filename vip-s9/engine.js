@@ -105,7 +105,8 @@
     clock: 0,             // 动画时钟（驱动热运动）
     focus: false,         // S6：聚焦反应实质（弱化旁观粒子），仅作用于 L2/L3
     typeFilter: 'all',    // S6：目录栏反应类型筛选胶囊（all/syn/dec/disp/dbl/mix/star）
-    starred: []           // S9：⭐ 重点攻克星标收藏的反应卡带 id 列表
+    starred: [],          // S9：⭐ 重点攻克星标收藏的反应卡带 id 列表
+    quantumMode: false    // S14：⚛️ L3 量子电子云 (|ψ|²) 透视模式（薛定谔概率密度视图）
   };
   function currentCartridge() {
     var list = window.CHEM_CARTRIDGES || [];
@@ -3754,6 +3755,17 @@
         return;
       }
 
+      // S14：量子云模式 —— 轴向纺锤形 σ 键电子云包络；多重键再加 π 云桥
+      if (state.quantumMode && dim >= 1) {
+        drawSigmaEnvelope(pa[0], pa[1], pb[0], pb[1], st.alpha);
+        if (b.order >= 2) {
+          drawPiBridge(pa[0], pa[1], pb[0], pb[1], st.alpha, time);
+          if (st.alpha > 0.55 && !st.breaking) {
+            drawPill((pa[0] + pb[0]) / 2, (pa[1] + pb[1]) / 2 - 34, 'σ+π电子云重叠', '#c4b5fd', 0.9);
+          }
+        }
+      }
+
       drawBond(pa[0], pa[1], pb[0], pb[1], b.order, {
         alpha: st.alpha * 0.9 * dim,
         stretch: st.stretch,
@@ -3801,8 +3813,13 @@
         var len = Math.sqrt(dx * dx + dy * dy) || 1;
         var ox = (-dy / len) * offset, oy = (dx / len) * offset;
         var wob = Math.sin(time * 3 + p * 1.7) * 3;
-        drawElectron(mx + ox + wob, my + oy, 5, pairAlpha);
-        drawElectron(mx + ox - wob * 0.6, my + oy - wob, 5, pairAlpha);
+        if (state.quantumMode) {
+          // S14：成键电子对同样量子化为 |ψ|² 概率采样微粒
+          drawQuantumSamples(mx + ox, my + oy, 10, time, p * 43.7 + 17.3, pairAlpha);
+        } else {
+          drawElectron(mx + ox + wob, my + oy, 5, pairAlpha);
+          drawElectron(mx + ox - wob * 0.6, my + oy - wob, 5, pairAlpha);
+        }
       }
     });
     // 电子转移动画（电子点在④，说明胶囊入队在⑤）——反应实质主角，不降噪
@@ -3811,8 +3828,12 @@
       if (k <= 0.01 || k >= 0.99) return;
       var x = mapX(lerp(tr.from[0], tr.to[0], k));
       var y = mapY(lerp(tr.from[1], tr.to[1], k));
-      drawElectron(x, y, 6, 0.95);
-      drawElectron(x - 12, y + 8, 4, 0.6);
+      if (state.quantumMode) {
+        drawQuantumSamples(x, y, 11, time, tr.window[0] * 977.3, 0.95);
+      } else {
+        drawElectron(x, y, 6, 0.95);
+        drawElectron(x - 12, y + 8, 4, 0.6);
+      }
       if (tr.label) {
         drawPill(x, y - 30, tr.label, '#ffd54f', 0.9);
       }
@@ -3821,9 +3842,14 @@
       if (!a.catalyst) drawShellElectrons(a, pos[a.id], t, time, spec[a.id] ? SPECTATOR_ALPHA : 1);
     });
 
-    // ⑤ HUD：左上角层标题
-    drawText('L3 · 原子 / 电子重排层', 22, 28, 15, '#ffe082', 'left', 0.9);
-    drawText('看得见：价电子 · 共用电子对 · 化合价的由来', 22, 52, 12, '#a99bd8', 'left', 0.85);
+    // ⑤ HUD：左上角层标题（S14：量子云模式切换薛定谔视图文案）
+    if (state.quantumMode) {
+      drawText('L3+ · 量子力学电子云层 (薛定谔 |ψ|² 概率密度视图)', 22, 28, 15, '#c4b5fd', 'left', 0.9);
+      drawText('看得见：电子云概率密度 · σ/π 轨道重叠 · 不确定性原理（按 Q 切回经典模型）', 22, 52, 12, '#a99bd8', 'left', 0.85);
+    } else {
+      drawText('L3 · 原子 / 电子重排层', 22, 28, 15, '#ffe082', 'left', 0.9);
+      drawText('看得见：价电子 · 共用电子对 · 化合价的由来', 22, 52, 12, '#a99bd8', 'left', 0.85);
+    }
 
     // 标注（限时显示：淡入后自动淡出，避免叠字）→ 入队，随⑤置顶
     (at.labels || []).forEach(function (lb) {
@@ -3842,6 +3868,96 @@
     flushPills();
   }
 
+  /* ---------------------------------------------------------------------- */
+  /* S14 · ⚛️ 量子电子云 (|ψ|²) 视觉件：概率云 / 高斯采样微粒 / σ·π 云包络     */
+  /* ---------------------------------------------------------------------- */
+
+  /** 绕核径向渐变柔光概率云 */
+  function drawQuantumNucleusCloud(x, y, r, alpha) {
+    var g = ctx.createRadialGradient(x, y, r * 0.2, x, y, r * 3.1);
+    g.addColorStop(0, 'rgba(168,85,247,0.34)');
+    g.addColorStop(0.45, 'rgba(124,108,240,0.15)');
+    g.addColorStop(1, 'rgba(124,108,240,0)');
+    ctx.save();
+    ctx.globalAlpha = alpha == null ? 1 : alpha;
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(x, y, r * 3.1, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  /** 量子概率采样微粒：围绕坐标高斯分布的 14 个高频闪烁微粒（紫青/亮金），体现 |ψ|² 与不确定性原理 */
+  function drawQuantumSamples(x, y, spread, time, seed, alpha) {
+    var a0 = alpha == null ? 1 : alpha;
+    for (var i = 0; i < 14; i++) {
+      // 伪高斯采样：三个确定性均匀数求和近似正态（seeded 保证画面不乱跳）
+      var u = seeded(seed + i * 3.11) + seeded(seed + i * 7.23) + seeded(seed + i * 11.7) - 1.5;
+      var v = seeded(seed + i * 13.3) + seeded(seed + i * 17.9) + seeded(seed + i * 23.1) - 1.5;
+      var px = x + u * spread;
+      var py = y + v * spread;
+      // 高频闪烁（逐粒异相），模拟电子以接近光速闪现的概率雾
+      var tw = 0.22 + 0.78 * Math.abs(Math.sin(time * (7 + (i % 5)) + i * 2.3));
+      var gold = i % 2 === 0;
+      var r = 1.6 + seeded(seed + i * 5.5) * 2.2;
+      ctx.save();
+      ctx.globalAlpha = a0 * tw * 0.85;
+      ctx.fillStyle = gold ? '#ffe082' : '#9d8cff';
+      ctx.shadowColor = gold ? 'rgba(255,213,79,0.9)' : 'rgba(157,140,255,0.9)';
+      ctx.shadowBlur = 6;
+      ctx.beginPath();
+      ctx.arc(px, py, r, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+  }
+
+  /** σ 键电子云包络：沿键轴“头碰头”纺锤形概率云 */
+  function drawSigmaEnvelope(ax, ay, bx, by, alpha) {
+    var mx = (ax + bx) / 2, my = (ay + by) / 2;
+    var dx = bx - ax, dy = by - ay;
+    var len = Math.sqrt(dx * dx + dy * dy) || 1;
+    var vx = -dy / len, vy = dx / len;
+    var w = Math.max(10, len * 0.16);
+    ctx.save();
+    ctx.globalAlpha = (alpha == null ? 1 : alpha) * 0.5;
+    var g = ctx.createLinearGradient(ax, ay, bx, by);
+    g.addColorStop(0, 'rgba(124,108,240,0.05)');
+    g.addColorStop(0.5, 'rgba(168,85,247,0.5)');
+    g.addColorStop(1, 'rgba(124,108,240,0.05)');
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.moveTo(ax, ay);
+    ctx.quadraticCurveTo(mx + vx * w * 2, my + vy * w * 2, bx, by);
+    ctx.quadraticCurveTo(mx - vx * w * 2, my - vy * w * 2, ax, ay);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+  }
+
+  /** π 键电子云桥：键轴两侧“肩并肩”重叠的淡紫色云桥（仅多重键） */
+  function drawPiBridge(ax, ay, bx, by, alpha, time) {
+    var mx = (ax + bx) / 2, my = (ay + by) / 2;
+    var dx = bx - ax, dy = by - ay;
+    var len = Math.sqrt(dx * dx + dy * dy) || 1;
+    var vx = -dy / len, vy = dx / len;
+    var w = Math.max(12, len * 0.22);
+    var pulse = 0.75 + 0.25 * Math.sin(time * 2.2);
+    for (var s = -1; s <= 1; s += 2) {
+      var ox = vx * s * w * 1.35, oy = vy * s * w * 1.35;
+      ctx.save();
+      ctx.globalAlpha = (alpha == null ? 1 : alpha) * 0.34 * pulse;
+      ctx.fillStyle = 'rgba(168,85,247,0.55)';
+      ctx.beginPath();
+      ctx.moveTo(ax + ox * 0.35, ay + oy * 0.35);
+      ctx.quadraticCurveTo(mx + ox * 2.1, my + oy * 2.1, bx + ox * 0.35, by + oy * 0.35);
+      ctx.quadraticCurveTo(mx + ox * 0.2, my + oy * 0.2, ax + ox * 0.35, ay + oy * 0.35);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+    }
+  }
+
   /** ④ 电子层轨道（虚线圈，画在原子球之上）；dim=旁观降噪系数 */
   function drawShellOrbits(atom, p, dim) {
     if (atom.catalyst) return;
@@ -3849,10 +3965,15 @@
     var shells = atom.shells || [1];
     var x = p[0], y = p[1];
     var d = dim == null ? 1 : dim;
+    // S14：量子云模式 —— 围绕原子核的径向渐变柔光概率云
+    if (state.quantumMode) {
+      drawQuantumNucleusCloud(x, y, st.r, d);
+    }
     for (var s = 0; s < shells.length; s++) {
       var rr = st.r + 22 + s * 26;
       ctx.save();
-      ctx.globalAlpha = 0.30 * d;
+      // S14：量子云模式下壳层圆环改为极淡虚线（轨道只是概率云的示意边界）
+      ctx.globalAlpha = (state.quantumMode ? 0.12 : 0.30) * d;
       ctx.strokeStyle = 'rgba(180,210,255,0.8)';
       ctx.lineWidth = 1.2;
       ctx.setLineDash([3, 5]);
@@ -3881,7 +4002,12 @@
       var ang = spin + (i / outerCount) * Math.PI * 2;
       var ex = x + Math.cos(ang) * outerR;
       var ey = y + Math.sin(ang) * outerR;
-      drawElectron(ex, ey, 5, 0.95 * d);
+      // S14：量子云模式 —— 不画单一实心球，改画 |ψ|² 高斯概率采样微粒
+      if (state.quantumMode) {
+        drawQuantumSamples(ex, ey, 9, time, i * 31.7 + 5, 0.95 * d);
+      } else {
+        drawElectron(ex, ey, 5, 0.95 * d);
+      }
     }
 
     // 内层电子（画小一点）
@@ -3890,7 +4016,13 @@
       var rr2 = st.r + 22 + s2 * 26;
       for (var j = 0; j < cnt; j++) {
         var ang2 = time * 0.8 + (j / cnt) * Math.PI * 2 + s2;
-        drawElectron(x + Math.cos(ang2) * rr2, y + Math.sin(ang2) * rr2, 3, 0.55 * d);
+        var ix = x + Math.cos(ang2) * rr2;
+        var iy = y + Math.sin(ang2) * rr2;
+        if (state.quantumMode) {
+          drawQuantumSamples(ix, iy, 6, time, s2 * 57.3 + j * 13.1, 0.55 * d);
+        } else {
+          drawElectron(ix, iy, 3, 0.55 * d);
+        }
       }
     }
 
@@ -4468,6 +4600,8 @@
     els.typeFilters = $('typeFilters');
     els.focusToggle = $('focusToggle');
     els.focusToggleWrap = $('focusToggleWrap');
+    els.quantumToggle = $('quantum-toggle');  // S14：⚛️ 量子电子云 (|ψ|²) 透视开关
+    els.quantumTruth = $('quantumTruth');     // S14：量子力学真相提示框
     els.energyHudBtn = $('btn-energy-hud');  // S12：📈 势能曲线按钮（平滑滚动聚焦 PES 面板）
     els.pesCard = $('pes-card');            // S12：右侧栏 PES 势能面卡片
     els.pesCanvas = $('pes-canvas');        // S12：PES 独立高分辨率画布
@@ -4564,6 +4698,11 @@
       });
     }
 
+    // S14：⚛️ 量子电子云 (|ψ|²) 透视模式开关
+    if (els.quantumToggle) {
+      els.quantumToggle.addEventListener('click', toggleQuantumMode);
+    }
+
     // S12：📈 势能曲线按钮 → 平滑滚动 + 高亮闪烁聚焦右侧 PES 面板
     if (els.energyHudBtn) {
       els.energyHudBtn.addEventListener('click', focusPESPanel);
@@ -4641,18 +4780,113 @@
       });
     }
 
-    // 图例
+    // 图例（S14：1:1 微缩符号化）
+    renderLegend(c);
+  }
+
+  /** S14：从图例项提取元素微缩球符号（el + label 中的电荷上标，如 Na⁺ / Fe²⁺ / Cl⁻） */
+  function legendAtomSymbol(item) {
+    var label = String(item.label || '');
+    var el = item.el || (label.match(/([A-Z][a-z]?)/) || [])[1] || '?';
+    var charge = (label.match(/[⁰¹²³⁴⁵⁶⁷⁸⁹]{0,2}[⁺⁻]{1,2}/) || [])[0] || '';
+    return el + charge;
+  }
+
+  /** S14：图例项语义分类：atom / bond / ionic / pair / dot */
+  function legendKindOf(item) {
+    var label = String(item.label || '');
+    var kind = item.kind || '';
+    if (kind === 'ionic' || /静电吸引|离子作用|虚线|离子键/.test(label)) return 'ionic';
+    if (kind === 'bond' || /化学键|共价键|配位键|三键|双键|单键/.test(label)) return 'bond';
+    if (kind === 'electron' || (kind === 'pair' && /电子/.test(label))) return 'pair';
+    if (kind === 'atom' || item.el) return 'atom';
+    return 'dot';
+  }
+
+  /** S14：图例 1:1 微缩符号渲染（元素球 / 单键 / 双键 / 离子虚线 / 电子对） */
+  function renderLegend(cartridge) {
+    if (!els.legendList) return;
     els.legendList.innerHTML = '';
-    (c.legend || []).forEach(function (item) {
-      var li = document.createElement('li');
+
+    // 卡带是否含多重键（order>=2）：决定「化学键」通用项拆分为 单键 + 双键/多重键 两条
+    var hasMultiBond = false;
+    ((cartridge.atomic && cartridge.atomic.bonds) || []).forEach(function (b) {
+      if (b && b.order >= 2) hasMultiBond = true;
+    });
+
+    function li(icon, text) {
+      var row = document.createElement('li');
+      if (icon) row.appendChild(icon);
+      row.appendChild(document.createTextNode(text));
+      els.legendList.appendChild(row);
+    }
+
+    function atomIcon(item) {
+      var icon = document.createElement('span');
+      icon.className = 'legend-icon-atom' + (markText(item.label) ? ' spectator' : '');
+      icon.style.background = item.color || '#90a4ae';
+      icon.style.borderColor = item.color || '#90a4ae';
+      var sym = document.createElement('span');
+      sym.className = 'la-sym';
+      sym.textContent = legendAtomSymbol(item);
+      icon.appendChild(sym);
+      return icon;
+    }
+
+    function plainIcon(cls) {
+      var icon = document.createElement('span');
+      icon.className = cls;
+      return icon;
+    }
+
+    var pairDone = false;
+    (cartridge.legend || []).forEach(function (item) {
+      var k = legendKindOf(item);
+      if (k === 'atom') {
+        li(atomIcon(item), item.label);
+        return;
+      }
+      if (k === 'ionic') {
+        li(plainIcon('legend-icon-bond-ionic'), item.label);
+        return;
+      }
+      if (k === 'bond') {
+        var label = String(item.label || '');
+        // 具名键型按语义图标；通用「化学键/共价键」项按卡带是否含多重键拆分渲染
+        if (/三键|双键|多重键|≡/.test(label)) {
+          li(plainIcon('legend-icon-bond-double'), item.label);
+        } else if (/单键/.test(label)) {
+          li(plainIcon('legend-icon-bond-single'), item.label);
+        } else if (/化学键 = |共价键 = |^化学键$|^共价键$/.test(label) && hasMultiBond) {
+          li(plainIcon('legend-icon-bond-single'), '单键 = 1对共用电子');
+          li(plainIcon('legend-icon-bond-double'), '双键/多重键 = 2~3对电子并行成键');
+        } else {
+          li(plainIcon('legend-icon-bond-single'), item.label);
+        }
+        return;
+      }
+      if (k === 'pair') {
+        // 「共用电子对」与「电子」合并为一条大小电子对比图标
+        if (!pairDone) {
+          pairDone = true;
+          li(plainIcon('legend-icon-electron-pair'),
+            '大发光球 = 成键共用电子对 ｜ 小点 = 外层价电子(e⁻)');
+        }
+        return;
+      }
+      // 兜底：无语义小圆点（如「旁观粒子 = 全程游荡不参与」说明项）
       var dot = document.createElement('span');
       dot.className = 'legend-dot';
       dot.style.background = item.color;
-      li.appendChild(dot);
-      li.appendChild(document.createTextNode(item.label));
-      els.legendList.appendChild(li);
+      li(dot, item.label);
     });
   }
+
+  /** S14：⚛️ 量子力学真相提示框文案（L3 量子云模式下经 linkTerms 高亮追加） */
+  var QUANTUM_TRUTH_TEXT =
+    '【⚛️ 量子力学真相】真实电子并非固定在圆环轨道上的小球，而是受波粒二象性与不确定性原理支配、' +
+    '以接近光速闪现的「电子云」(概率密度 |ψ|²)。单键是电子云头碰头重叠形成的σ键，' +
+    '双键则是头碰头σ键加上下肩并肩π键电子云桥！';
 
   /** 时间轴 / 解说卡片 / 滑杆数字 全同步 */
   function syncAll() {
@@ -4677,6 +4911,18 @@
       els.narrPhase.textContent = '进度 ' + pct + '%';
     } else {
       els.narrPhase.textContent = '进度 ' + pct + '%';
+    }
+
+    // S14：⚛️ 量子力学真相提示框（L3 + 量子云模式下追加在解说末尾）
+    if (els.quantumTruth) {
+      var qOn = !!(state.quantumMode && state.layer === 'L3');
+      if (qOn) {
+        els.quantumTruth.hidden = false;
+        els.quantumTruth.innerHTML = linkTerms(QUANTUM_TRUTH_TEXT);
+      } else if (!els.quantumTruth.hidden) {
+        els.quantumTruth.hidden = true;
+        els.quantumTruth.innerHTML = '';
+      }
     }
 
     // 相位标签高亮
@@ -5051,6 +5297,7 @@
     if (layerKey !== 'L1' && layerKey !== 'L2' && layerKey !== 'L3') return;
     state.layer = layerKey;
     applyLayerUI();
+    syncAll();          // S14：跨层时同步量子提示框显隐
     persistLastView();
     render();
   }
@@ -5058,6 +5305,19 @@
   function toggleFocus() {
     state.focus = !state.focus;
     if (els.focusToggle) els.focusToggle.checked = state.focus;
+    render();
+  }
+
+  /** S14：⚛️ 切换玻尔行星模型与薛定谔量子电子云概率密度视图 */
+  function toggleQuantumMode() {
+    state.quantumMode = !state.quantumMode;
+    // 开启量子云时若不在 L3 原子层，自动切到 L3 才能看到电子云
+    if (state.quantumMode && state.layer !== 'L3') setLayer('L3');
+    if (els.quantumToggle) {
+      els.quantumToggle.classList.toggle('quantum-active', state.quantumMode);
+      els.quantumToggle.setAttribute('aria-pressed', state.quantumMode ? 'true' : 'false');
+    }
+    syncAll();
     render();
   }
 
@@ -5114,6 +5374,13 @@
       if (key === 'f' || key === 'F') {
         ev.preventDefault();
         toggleFocus();
+        return;
+      }
+
+      // Q：一键切换 ⚛️ 量子电子云 (|ψ|²) 透视模式
+      if (key === 'q' || key === 'Q') {
+        ev.preventDefault();
+        toggleQuantumMode();
         return;
       }
 

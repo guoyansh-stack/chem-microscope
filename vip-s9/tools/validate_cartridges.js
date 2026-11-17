@@ -325,8 +325,8 @@ var extensions = globalThis.CHEM_EXTENSIONS;
 if (!Array.isArray(glossary) || glossary.length === 0) {
   fail('未加载到 CHEM_GLOSSARY（data/glossary_extensions.js 未挂载词典）');
 } else {
-  if (glossary.length < 15) {
-    fail('CHEM_GLOSSARY 词条数 ' + glossary.length + ' < 15（S10 要求至少 15 条初升高物理化学术语）');
+  if (glossary.length !== 20) {
+    fail('CHEM_GLOSSARY 词条数 ' + glossary.length + ' ≠ 20（S14 验收口径：S8 基线 11 + S10~S12 扩充 7 + S14 量子词条 2）');
   }
   var seenTermIds = {};
   var seenKeywords = {};

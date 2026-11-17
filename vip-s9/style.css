@@ -463,6 +463,18 @@ body {
   opacity: 0.45;
 }
 
+/* S14：⚛️ 量子电子云 (|ψ|²) 透视模式激活态（紫辉光） */
+.focus-toggle.quantum-active {
+  border-color: #a855f7;
+  background: rgba(168, 85, 247, 0.22);
+  color: #f3e8ff;
+  box-shadow: 0 0 12px rgba(168, 85, 247, 0.35);
+}
+
+.focus-toggle.quantum-active:hover {
+  border-color: rgba(168, 85, 247, 0.85);
+}
+
 /* S11：📈 势能曲线 (E) HUD 切换按钮（激活态青绿高亮） */
 .energy-hud-btn {
   align-self: center;
@@ -626,6 +638,24 @@ body {
   color: #cfdcee;
 }
 
+/* S14：⚛️ 量子力学真相提示框（紫金边框，L3 量子云模式下追加在解说末尾） */
+.quantum-truth {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border: 1px solid rgba(168, 85, 247, 0.55);
+  border-left: 3px solid #a855f7;
+  border-radius: 8px;
+  background: rgba(168, 85, 247, 0.12);
+  box-shadow: 0 0 12px rgba(168, 85, 247, 0.18);
+  font-size: 12.5px;
+  line-height: 1.8;
+  color: #e9d5ff;
+}
+
+.quantum-truth[hidden] {
+  display: none;
+}
+
 /* 图例 */
 .legend-list {
   list-style: none;
@@ -649,6 +679,108 @@ body {
   border-radius: 50%;
   flex: 0 0 auto;
   box-shadow: 0 0 8px rgba(255, 255, 255, 0.18);
+}
+
+/* S14：图例 1:1 微缩符号化（元素球 / 单键 / 双键 / 离子虚线 / 电子对） */
+.legend-icon-atom {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+  border: 2px solid transparent;
+  box-shadow: 0 0 8px rgba(255, 255, 255, 0.18);
+}
+
+.legend-icon-atom .la-sym {
+  color: #ffffff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.55);
+}
+
+.legend-icon-atom.spectator {
+  opacity: 0.45;
+  border-style: dashed;
+}
+
+.legend-icon-bond-single {
+  width: 22px;
+  height: 3px;
+  flex: 0 0 auto;
+  border-radius: 2px;
+  background: #9ae6ff;
+  box-shadow: 0 0 6px rgba(154, 230, 255, 0.55);
+}
+
+.legend-icon-bond-double {
+  position: relative;
+  width: 22px;
+  height: 9px;
+  flex: 0 0 auto;
+}
+
+.legend-icon-bond-double::before,
+.legend-icon-bond-double::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  width: 22px;
+  height: 3px;
+  border-radius: 2px;
+  background: #9ae6ff;
+  box-shadow: 0 0 6px rgba(154, 230, 255, 0.55);
+}
+
+.legend-icon-bond-double::before {
+  top: 0;
+}
+
+.legend-icon-bond-double::after {
+  top: 6px;
+}
+
+.legend-icon-bond-ionic {
+  width: 22px;
+  height: 0;
+  flex: 0 0 auto;
+  border-top: 2.5px dashed #fbbf24;
+}
+
+.legend-icon-electron-pair {
+  position: relative;
+  width: 22px;
+  height: 14px;
+  flex: 0 0 auto;
+}
+
+.legend-icon-electron-pair::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #fff8d6 0%, #ffd54f 55%, rgba(255, 213, 79, 0) 100%);
+  box-shadow: 0 0 9px rgba(255, 213, 79, 0.9);
+}
+
+.legend-icon-electron-pair::after {
+  content: '';
+  position: absolute;
+  right: 1px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #ffd54f;
+  box-shadow: 0 0 5px rgba(255, 213, 79, 0.75);
 }
 
 /* 小贴士 */
