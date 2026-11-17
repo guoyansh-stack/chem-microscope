@@ -52,7 +52,7 @@
   var combustion = {
     id: 'h2_combustion',
     badge: 'syn',
-    chapter: { id: 'g8u2', name: '【八年级·第2单元】水与微观粒子', order: 2, seq: 1 },
+    chapter: { id: 'g8u2', name: '【第2章 身边的化学物质】水与微观粒子', order: 2, seq: 1 },
     name: '氢气燃烧生成水',
     shortName: '氢气燃烧',
     icon: '🔥',
@@ -61,8 +61,9 @@
     typeDesc: '多变一 · 合成',
     summary:
       '两种气体（氢气、氧气）点燃后变成一种液体（水），同时放出大量热。' +
-      '宏观看到火焰和水雾，微观上是 H-H 键、O=O 键断裂，重新形成 O-H 键。',
-    energyProfile: { dh: -285.8, ea: 165 },
+      '宏观看到火焰和水雾，微观上是 H-H 键、O=O 键断裂，重新形成 O-H 键。' +
+      '点燃前必须验纯。',
+    energyProfile: { dh: -571.6, ea: 165 },
     legend: legendCommon(),
 
     /* ---------------- L1 宏观实验台 ---------------- */
@@ -72,7 +73,7 @@
       vesselLabel: '氢气 + 空气',
       productLabel: '水雾',
       phenomena: [
-        { at: 0.26, label: '点燃，听到“噗”的爆鸣声' },
+        { at: 0.26, label: '点燃纯净氢气，安静燃烧' },
         { at: 0.36, label: '产生淡蓝色火焰' },
         { at: 0.52, label: '放出大量热，容器发烫' },
         { at: 0.66, label: '器壁出现水雾 / 水珠' }
@@ -98,11 +99,11 @@
         { a: 'h1a', b: 'h1b', order: 1, breakAt: [0.30, 0.42] },
         { a: 'h2a', b: 'h2b', order: 1, breakAt: [0.30, 0.42] },
         { a: 'o1', b: 'o2', order: 2, breakAt: [0.32, 0.45] },
-        // 新键形成：O 牵住两个 H → H₂O
+        // 新键形成：O 牵住两个 H → H₂O（与 end 坐标分组一致：o1–h1a/h1b、o2–h2a/h2b）
         { a: 'o1', b: 'h1a', order: 1, formAt: [0.55, 0.70] },
-        { a: 'o1', b: 'h2b', order: 1, formAt: [0.56, 0.71] },
+        { a: 'o1', b: 'h1b', order: 1, formAt: [0.56, 0.71] },
         { a: 'o2', b: 'h2a', order: 1, formAt: [0.55, 0.70] },
-        { a: 'o2', b: 'h1b', order: 1, formAt: [0.56, 0.71] }
+        { a: 'o2', b: 'h2b', order: 1, formAt: [0.56, 0.71] }
       ],
       captions: [
         { from: 0.00, to: 0.25, text: '氢气分子和氧气分子各自手拉手，自由漂浮' },
@@ -195,7 +196,7 @@
   var electrolysis = {
     id: 'water_electrolysis',
     badge: 'dec',
-    chapter: { id: 'g8u2', name: '【八年级·第2单元】水与微观粒子', order: 2, seq: 2 },
+    chapter: { id: 'g8u2', name: '【第2章 身边的化学物质】水与微观粒子', order: 2, seq: 2 },
     name: '水的电解',
     shortName: '水电解',
     icon: '⚡',
@@ -206,14 +207,14 @@
       '一种液体（水）在通电后拆成两种气体（氢气和氧气）。' +
       '宏观看到两个电极冒气泡（氢气体积约为氧气的 2 倍），' +
       '微观上是 O-H 键断裂、原子重新配对成 H₂ 和 O₂。',
-    energyProfile: { dh: 285.8, ea: 320 },
+    energyProfile: { dh: 571.6, ea: 620 },
     legend: legendCommon(),
 
     /* ---------------- L1 宏观实验台 ---------------- */
     macro: {
       scene: 'electrolysis',
       conditions: '通电',
-      vesselLabel: '水（加少量增强导电）',
+      vesselLabel: '水（加少量稀硫酸或 NaOH 增强导电）',
       productLabel: '氢气 + 氧气',
       phenomena: [
         { at: 0.26, label: '接通电源，电极上出现小气泡' },
@@ -289,7 +290,7 @@
         { at: 0.40, text: '通电把电子强行推动', pos: [0.50, 0.88] },
         { at: 0.58, text: '共用电子对散伙', pos: [0.72, 0.22] },
         { at: 0.82, text: '2 个 H 各拿 1 个电子 → H₂', pos: [0.52, 0.10] },
-        { at: 0.82, text: 'O 原子重排电子 → O₂', pos: [0.52, 0.90] }
+        { at: 0.82, text: 'O 原子结成 O₂（另一分子的 O 与之结合，图中未画）', pos: [0.52, 0.90] }
       ],
       takeaway:
         '通电相当于“强行拆散手拉手”：共用电子对被拉散，化学键断裂。' +

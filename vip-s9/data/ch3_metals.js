@@ -19,9 +19,9 @@
 (function (root) {
   'use strict';
 
-  var CH_U1 = { id: 'g8u1', name: '【八年级·第1单元】空气与氧气', order: 1 };
-  var CH_U3 = { id: 'g8u3', name: '【八年级·第3单元】碳与碳的氧化物', order: 3 };
-  var CH_G9M = { id: 'g9e1', name: '【九年级拓展·提前看】金属活动性与置换', order: 4 };
+  var CH_U1 = { id: 'g8u1', name: '【第2章 身边的化学物质】空气与氧气', order: 1 };
+  var CH_U3 = { id: 'g8u3', name: '【第2章 身边的化学物质】碳与碳的氧化物', order: 3 };
+  var CH_G9M = { id: 'g9e1', name: '【第5章 金属的冶炼与利用】金属活动性与置换', order: 4 };
 
   /** 派生章节对象：seq = 单元内教学顺序（沪教版真实学习阶梯） */
   function ch(base, seq) {
@@ -68,8 +68,8 @@
     typeDesc: '多变一 · 混合价态',
     summary:
       '螺旋状铁丝在纯氧中剧烈燃烧、火星四射、生成黑色固体（Fe₃O₄），集气瓶底要铺水或细沙防止炸裂。' +
-      '重点破除困惑：Fe₃O₄ 不是“八分之八价”的怪东西，而是 1 个 Fe²⁺ 与 2 个 Fe³⁺、4 个 O²⁻ 组成的混合价态离子晶体。',
-    energyProfile: { dh: -851.5, ea: 240 },
+      '重点破除困惑：Fe₃O₄ 不是“三分之八价（+8/3）”的怪东西，而是 1 个 Fe²⁺ 与 2 个 Fe³⁺、4 个 O²⁻ 组成的混合价态离子晶体。',
+    energyProfile: { dh: -1118.4, ea: 240 },
     legend: legendBase([
       { kind: 'atom', el: 'O', label: '氧原子 O（个头大、更稳重）', color: C.O },
       { kind: 'pair', label: '四氧化三铁 = 混合价态离子晶体', color: C.pair }
@@ -82,8 +82,8 @@
       vesselLabel: '螺旋状铁丝（纯氧）',
       productLabel: '黑色固体 Fe₃O₄',
       phenomena: [
-        { at: 0.22, label: '铁丝绕成螺旋状，瓶底铺水/细沙' },
-        { at: 0.32, label: '剧烈燃烧，火星四射' },
+        { at: 0.22, label: '铁丝绕成螺旋状、下端系火柴，瓶底铺水/细沙' },
+        { at: 0.32, label: '火柴引燃铁丝，剧烈燃烧，火星四射' },
         { at: 0.55, label: '放出大量热，生成黑色固体' },
         { at: 0.80, label: '黑色固体 Fe₃O₄ 落在细沙上' }
       ]
@@ -307,14 +307,9 @@
         { id: 'cl2', el: 'Cl', jitter: 0.7, start: [0.83, 0.70], mid: [0.68, 0.62], end: [0.72, 0.62] }
       ],
       bonds: [
-        // HCl 断键
-        { a: 'h1', b: 'cl1', order: 1, breakAt: [0.28, 0.42] },
-        { a: 'h2', b: 'cl2', order: 1, breakAt: [0.30, 0.44] },
+        // 盐酸为强电解质：HCl 已完全电离为游离 H⁺/Cl⁻（不画 H-Cl 分子）；Cl⁻ 全程旁观
         // 两个 H 结合成 H₂
-        { a: 'h1', b: 'h2', order: 1, formAt: [0.55, 0.72] },
-        // Fe²⁺ 与 Cl⁻ 静电相吸（FeCl₂ 在溶液中）
-        { a: 'fe', b: 'cl1', order: 1, ionic: true, formAt: [0.52, 0.68] },
-        { a: 'fe', b: 'cl2', order: 1, ionic: true, formAt: [0.54, 0.70] }
+        { a: 'h1', b: 'h2', order: 1, formAt: [0.55, 0.72] }
       ],
       captions: [
         { from: 0.00, to: 0.25, text: '铁钉表面的 Fe 原子，遇上盐酸里游荡的 H⁺ 和 Cl⁻' },
@@ -443,10 +438,10 @@
       vesselLabel: 'CO + Fe₂O₃（高炉炼铁）',
       productLabel: 'CO₂ 使石灰水变浑浊',
       phenomena: [
-        { at: 0.22, label: '红棕色粉末 Fe₂O₃ 通入 CO' },
+        { at: 0.22, label: '先通 CO 排尽空气，再加热红棕色 Fe₂O₃ 粉末' },
         { at: 0.42, label: '高温加热，粉末逐渐变黑' },
         { at: 0.62, label: '澄清石灰水变浑浊（CO₂）' },
-        { at: 0.80, label: '尾气点燃处理（防 CO 中毒）' }
+        { at: 0.80, label: '结束先停火、继续通 CO 至冷却；尾气点燃处理（防 CO 中毒）' }
       ]
     },
 
@@ -460,7 +455,7 @@
         { id: 'o1', el: 'O', jitter: 0.6, start: [0.29, 0.26], mid: [0.43, 0.34], end: [0.47, 0.22] },
         { id: 'o2', el: 'O', jitter: 0.6, start: [0.31, 0.50], mid: [0.45, 0.50], end: [0.51, 0.50] },
         { id: 'o3', el: 'O', jitter: 0.6, start: [0.29, 0.76], mid: [0.43, 0.68], end: [0.47, 0.80] },
-        // 3 个 CO 分子（C≡O），像拆迁队待命
+        // 3 个 CO 分子（C=O，示意键级 2），像拆迁队待命
         { id: 'c1', el: 'C', jitter: 0.55, start: [0.80, 0.20], mid: [0.61, 0.28], end: [0.69, 0.16] },
         { id: 'o4', el: 'O', jitter: 0.65, start: [0.91, 0.20], mid: [0.71, 0.27], end: [0.85, 0.18] },
         { id: 'c2', el: 'C', jitter: 0.55, start: [0.80, 0.50], mid: [0.61, 0.50], end: [0.71, 0.50] },
@@ -516,7 +511,7 @@
           label: 'C 把电子让给 Fe³⁺（C 被氧化）'
         },
         {
-          id: 'fe-gains-2',
+          id: 'fe-gains-3',
           window: [0.50, 0.68],
           from: [0.74, 0.42], to: [0.28, 0.56],
           label: 'Fe³⁺ 得回 3e⁻ → Fe（被还原）'
@@ -532,7 +527,8 @@
       takeaway:
         '3 个 CO 分子像精准的拆迁队，逐个夺走 Fe₂O₃ 晶格中的 3 个 O 原子，变成 CO₂ 飞走；' +
         '原本失去 3 个电子的 Fe³⁺ 重新拿回电子，被“还原”成自由的 Fe 原子（能被磁铁吸引）。' +
-        '含氧化合物失去氧=还原反应，CO 夺走氧=氧化反应。尾气里的 CO 有毒，必须点燃处理！'
+        '含氧化合物失去氧=还原反应，CO 夺走氧=氧化反应。尾气里的 CO 有毒，必须点燃处理！' +
+        '（原子层为单场景特写，只放大一次转移（示意），不代表配平数。）'
     },
 
     /* ---------------- 人话解说卡片 ---------------- */
@@ -633,8 +629,7 @@
         { a: 's', b: 'o2', order: 1 },
         { a: 's', b: 'o3', order: 1 },
         { a: 's', b: 'o4', order: 1 },
-        // Cu²⁺ 与 SO₄²⁻ 的静电引力断开（换舞伴）
-        { a: 'cu', b: 'o1', order: 1, ionic: true, breakAt: [0.30, 0.44] },
+        // CuSO₄ 为强电解质：起始即游离 Cu²⁺/SO₄²⁻（不画 Cu-O 离子键）
         // Fe²⁺ 接手 SO₄²⁻
         { a: 'fe', b: 'o3', order: 1, ionic: true, formAt: [0.56, 0.72] }
       ],

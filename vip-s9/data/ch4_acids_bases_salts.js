@@ -19,7 +19,7 @@
 (function (root) {
   'use strict';
 
-  var CH = { id: 'g9e2', name: '【九年级拓展·提前看】酸碱盐与离子实质', order: 5 };
+  var CH = { id: 'g9e2', name: '【第7章 应用广泛的酸、碱、盐】酸碱盐与离子实质', order: 5 };
 
   /** 派生章节对象：seq = 单元内教学顺序（沪教版真实学习阶梯） */
   function ch(base, seq) {
@@ -127,18 +127,18 @@
     atomic: {
       atoms: [
         {
-          id: 'na', el: 'Na', shells: [2, 8, 1],
+          id: 'na', el: 'Na', shells: [2, 8],
           start: [0.11, 0.30], mid: [0.115, 0.30], end: [0.11, 0.30],
           ion: { label: 'Na⁺ · 观众离子', from: 0.18 }
         },
         {
-          id: 'cl', el: 'Cl', shells: [2, 8, 7],
+          id: 'cl', el: 'Cl', shells: [2, 8, 8],
           start: [0.86, 0.56], mid: [0.28, 0.52], end: [0.11, 0.52],
           ion: { label: 'Cl⁻ · 观众离子', from: 0.30 }
         },
         { id: 'o1', el: 'O', shells: [2, 6], start: [0.44, 0.50], mid: [0.455, 0.485], end: [0.465, 0.475] },
         { id: 'h1', el: 'H', shells: [1], start: [0.35, 0.40], mid: [0.365, 0.385], end: [0.375, 0.38] },
-        { id: 'h2', el: 'H', shells: [1], start: [0.82, 0.30], mid: [0.58, 0.40], end: [0.545, 0.405] }
+        { id: 'h2', el: 'H', shells: [], start: [0.82, 0.30], mid: [0.58, 0.40], end: [0.545, 0.405] }
       ],
       bonds: [
         // OH⁻ 已有的 O-H 共价键（共用 1 对电子）
@@ -151,7 +151,7 @@
           id: 'h-runs',
           window: [0.38, 0.58],
           from: [0.80, 0.28], to: [0.55, 0.42],
-          label: 'H⁺ 扑向 OH⁻！'
+          label: 'H⁺ 扑向 OH⁻！（粒子迁移，非电子转移）'
         }
       ],
       labels: [
@@ -293,7 +293,7 @@
       atoms: [
         // 主角：Cu²⁺
         {
-          id: 'cu', el: 'Cu', shells: [2, 8, 18, 1],
+          id: 'cu', el: 'Cu', shells: [2, 8, 18],
           start: [0.38, 0.28], mid: [0.42, 0.33], end: [0.45, 0.42],
           ion: { label: 'Cu²⁺', from: 0.22 }
         },
@@ -302,10 +302,15 @@
         { id: 'h1', el: 'H', shells: [1], start: [0.74, 0.15], mid: [0.61, 0.19], end: [0.575, 0.255] },
         { id: 'o2', el: 'O', shells: [2, 6], start: [0.66, 0.48], mid: [0.55, 0.46], end: [0.55, 0.50] },
         { id: 'h2', el: 'H', shells: [1], start: [0.76, 0.52], mid: [0.63, 0.51], end: [0.62, 0.545] },
-        // 观众：Na⁺
+        // 观众：2 个 Na⁺（配平系数 2NaOH）
         {
-          id: 'na', el: 'Na', shells: [2, 8, 1],
+          id: 'na', el: 'Na', shells: [2, 8],
           start: [0.09, 0.24], mid: [0.095, 0.24], end: [0.09, 0.24],
+          ion: { label: 'Na⁺ · 旁观', from: 0.20 }
+        },
+        {
+          id: 'na2', el: 'Na', shells: [2, 8],
+          start: [0.09, 0.38], mid: [0.095, 0.38], end: [0.09, 0.38],
           ion: { label: 'Na⁺ · 旁观', from: 0.20 }
         },
         // 观众：SO₄²⁻ 离子团（坐底部示“旁观”）
@@ -333,13 +338,13 @@
           id: 'oh-1',
           window: [0.36, 0.56],
           from: [0.72, 0.20], to: [0.52, 0.30],
-          label: 'OH⁻ 扑向 Cu²⁺'
+          label: 'OH⁻ 扑向 Cu²⁺（粒子迁移，非电子转移）'
         },
         {
           id: 'oh-2',
           window: [0.42, 0.62],
           from: [0.74, 0.50], to: [0.55, 0.48],
-          label: '第 2 个 OH⁻ 也来了'
+          label: '第 2 个 OH⁻ 也来了（粒子迁移，非电子转移）'
         }
       ],
       labels: [
@@ -484,15 +489,25 @@
         { id: 'o2', el: 'O', shells: [2, 6], start: [0.82, 0.33], mid: [0.76, 0.35], end: [0.73, 0.37] },
         { id: 'o3', el: 'O', shells: [2, 6], start: [0.62, 0.55], mid: [0.57, 0.53], end: [0.54, 0.53] },
         { id: 'o4', el: 'O', shells: [2, 6], start: [0.82, 0.55], mid: [0.76, 0.53], end: [0.73, 0.53] },
-        // 观众：Na⁺、Cl⁻
+        // 观众：2 个 Na⁺、2 个 Cl⁻（配平系数 BaCl₂ + Na₂SO₄ → … + 2NaCl）
         {
-          id: 'na', el: 'Na', shells: [2, 8, 1],
+          id: 'na', el: 'Na', shells: [2, 8],
           start: [0.10, 0.22], mid: [0.105, 0.22], end: [0.10, 0.22],
           ion: { label: 'Na⁺ · 旁观', from: 0.20 }
         },
         {
-          id: 'cl', el: 'Cl', shells: [2, 8, 7],
+          id: 'na2', el: 'Na', shells: [2, 8],
+          start: [0.10, 0.34], mid: [0.105, 0.34], end: [0.10, 0.34],
+          ion: { label: 'Na⁺ · 旁观', from: 0.20 }
+        },
+        {
+          id: 'cl', el: 'Cl', shells: [2, 8, 8],
           start: [0.90, 0.24], mid: [0.905, 0.24], end: [0.90, 0.24],
+          ion: { label: 'Cl⁻ · 旁观', from: 0.20 }
+        },
+        {
+          id: 'cl2', el: 'Cl', shells: [2, 8, 8],
+          start: [0.90, 0.36], mid: [0.905, 0.36], end: [0.90, 0.36],
           ion: { label: 'Cl⁻ · 旁观', from: 0.20 }
         }
       ],
@@ -511,7 +526,7 @@
           id: 'ba-runs',
           window: [0.36, 0.56],
           from: [0.34, 0.36], to: [0.52, 0.40],
-          label: 'Ba²⁺ 扑向 SO₄²⁻'
+          label: 'Ba²⁺ 扑向 SO₄²⁻（粒子迁移，非电子转移）'
         }
       ],
       labels: [
@@ -524,6 +539,7 @@
       ],
       takeaway:
         'Ba²⁺ 与 SO₄²⁻ 一旦碰撞，静电引力就把它们锁成极难电离的 BaSO₄ 晶格，沉入底部——既不溶于水，也不溶于稀硝酸（这就是特征检验的底气）。' +
+        '规范检验步骤：先加稀盐酸酸化，再加 BaCl₂ 溶液。' +
         '为什么不用 AgNO₃ 检验 SO₄²⁻？因为 Ag₂SO₄ 微溶，现象不干脆还会干扰；而 BaSO₄ 坚不可摧，一锤定音。' +
         '（AgNO₃ 是检验 Cl⁻ 的：AgCl 也是白色沉淀且不溶于稀硝酸。）Na⁺、Cl⁻ 全程旁观！'
     },
@@ -652,18 +668,28 @@
         { id: 'o1', el: 'O', shells: [2, 6], start: [0.26, 0.34], mid: [0.31, 0.38], end: [0.28, 0.44] },
         { id: 'o2', el: 'O', shells: [2, 6], start: [0.58, 0.34], mid: [0.53, 0.38], end: [0.54, 0.40] },
         { id: 'o3', el: 'O', shells: [2, 6], start: [0.42, 0.64], mid: [0.42, 0.58], end: [0.42, 0.56] },
-        // 主角：2 个 H⁺
-        { id: 'h1', el: 'H', shells: [1], start: [0.74, 0.24], mid: [0.36, 0.34], end: [0.30, 0.62] },
-        { id: 'h2', el: 'H', shells: [1], start: [0.74, 0.56], mid: [0.50, 0.52], end: [0.46, 0.62] },
-        // 观众：Na⁺、Cl⁻
+        // 主角：2 个 H⁺（游离质子，空壳层）
+        { id: 'h1', el: 'H', shells: [], start: [0.74, 0.24], mid: [0.36, 0.34], end: [0.30, 0.62] },
+        { id: 'h2', el: 'H', shells: [], start: [0.74, 0.56], mid: [0.50, 0.52], end: [0.46, 0.62] },
+        // 观众：2 个 Na⁺、2 个 Cl⁻（配平系数 Na₂CO₃ + 2HCl → 2NaCl + …）
         {
-          id: 'na', el: 'Na', shells: [2, 8, 1],
+          id: 'na', el: 'Na', shells: [2, 8],
           start: [0.08, 0.22], mid: [0.085, 0.22], end: [0.08, 0.22],
           ion: { label: 'Na⁺ · 旁观', from: 0.20 }
         },
         {
-          id: 'cl', el: 'Cl', shells: [2, 8, 7],
+          id: 'na2', el: 'Na', shells: [2, 8],
+          start: [0.08, 0.34], mid: [0.085, 0.34], end: [0.08, 0.34],
+          ion: { label: 'Na⁺ · 旁观', from: 0.20 }
+        },
+        {
+          id: 'cl', el: 'Cl', shells: [2, 8, 8],
           start: [0.88, 0.22], mid: [0.885, 0.22], end: [0.88, 0.22],
+          ion: { label: 'Cl⁻ · 旁观', from: 0.20 }
+        },
+        {
+          id: 'cl2', el: 'Cl', shells: [2, 8, 8],
+          start: [0.88, 0.34], mid: [0.885, 0.34], end: [0.88, 0.34],
           ion: { label: 'Cl⁻ · 旁观', from: 0.20 }
         }
       ],
@@ -683,13 +709,13 @@
           id: 'proton-1',
           window: [0.30, 0.50],
           from: [0.72, 0.24], to: [0.36, 0.36],
-          label: 'H⁺ 直接扑向 CO₃²⁻（无需拆晶格！）'
+          label: 'H⁺ 直接扑向 CO₃²⁻（无需拆晶格！）（粒子迁移，非电子转移）'
         },
         {
           id: 'proton-2',
           window: [0.34, 0.54],
           from: [0.72, 0.56], to: [0.48, 0.54],
-          label: '第 2 个 H⁺ 也扑上来'
+          label: '第 2 个 H⁺ 也扑上来（粒子迁移，非电子转移）'
         }
       ],
       labels: [

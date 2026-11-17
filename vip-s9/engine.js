@@ -4083,13 +4083,17 @@
     return ea + (dh - ea) * smoothstep((t - 0.45) / 0.55);
   }
 
-  /** 实时动力学阶段文本：`0.45 [‡ 过渡态鞍点] 旧键半断 · 新键半生` */
-  function pesStageText(t) {
+  /** 实时动力学阶段文本：`0.45 [‡ 过渡态鞍点] 旧键半断 · 新键半生`；dh>0 吸热卡改写滑落段文案 */
+  function pesStageText(t, dh) {
     var n = clamp01(t).toFixed(2);
     if (t < 0.20) return n + ' [反应物基态] 化学键稳固 · 体系低能';
     if (t < 0.40) return n + ' [活化爬坡] 吸收活化能 · 旧键被拉伸';
     if (t < 0.52) return n + ' [‡ 过渡态鞍点] 旧键半断 · 新键半生';
-    if (t < 0.85) return n + ' [新键生成] 越垒滑落 · 释放能量';
+    if (t < 0.85) {
+      return dh > 0
+        ? n + ' [新键生成] 越垒滑落 · 仍高于反应物、净吸热'
+        : n + ' [新键生成] 越垒滑落 · 释放能量';
+    }
     return n + ' [生成物稳态] 新键稳固 · 能量落定';
   }
 
@@ -4337,7 +4341,7 @@
       els.pesMeta.innerHTML = metaHTML;
       pesLastMeta = metaHTML;
     }
-    var stageStr = pesStageText(t);
+    var stageStr = pesStageText(t, ep.dh);
     if (els.pesStage && pesLastStage !== stageStr) {
       els.pesStage.textContent = stageStr;
       els.pesStage.classList.toggle('ts', t >= 0.40 && t <= 0.52);
@@ -4816,12 +4820,13 @@
     renderLegend(c);
   }
 
-  /** S14：从图例项提取元素微缩球符号（el + label 中的电荷上标，如 Na⁺ / Fe²⁺ / Cl⁻） */
+  /** S14：从图例项提取微缩球符号——优先取 label 中完整物种符号（SO₄²⁻ / OH⁻ / CO₃²⁻ / Na⁺），
+   *  原子条目不带电荷（避免把括号里的电荷并入元素符号，如 O⁻ / S²⁻ / C²⁻ 式误抽） */
   function legendAtomSymbol(item) {
     var label = String(item.label || '');
-    var el = item.el || (label.match(/([A-Z][a-z]?)/) || [])[1] || '?';
-    var charge = (label.match(/[⁰¹²³⁴⁵⁶⁷⁸⁹]{0,2}[⁺⁻]{1,2}/) || [])[0] || '';
-    return el + charge;
+    var m = label.match(/(?:[A-Z][a-z]?[₀-₉]*)+(?:[⁰¹²³⁴⁵⁶⁷⁸⁹]{0,2}[⁺⁻]{1,2})?/);
+    if (m && m[0]) return m[0];
+    return item.el || '?';
   }
 
   /** S14：图例项语义分类：atom / bond / ionic / pair / dot */
