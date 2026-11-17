@@ -6,7 +6,7 @@
   <meta name="robots" content="noindex,nofollow" />
   <title>初中化学 · 宏微观三层穿透显微镜</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%2312203a'/%3E%3Ccircle cx='32' cy='30' r='12' fill='%23ff6b6b'/%3E%3Ccircle cx='18' cy='44' r='7' fill='%237fd4ff'/%3E%3Ccircle cx='46' cy='44' r='7' fill='%237fd4ff'/%3E%3C/svg%3E" />
-  <link rel="stylesheet" href="style.css?v=14.0" />
+  <link rel="stylesheet" href="style.css?v=14.2" />
   <!-- VIP-S9 私享暗门：防爬 + 轻量口令锁（口令经编码比对，不含明文） -->
   <style>
     html.vip-pending .app { display: none !important; }
@@ -122,6 +122,7 @@
         <span class="kbd-chip"><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd>视界</span>
         <span class="kbd-chip"><kbd>F</kbd>聚焦</span>
         <span class="kbd-chip"><kbd>Q</kbd>量子云</span>
+        <span class="kbd-chip"><kbd>C</kbd>闯关</span>
         <span class="kbd-chip"><kbd>E</kbd>势能</span>
         <span class="kbd-chip"><kbd>Esc</kbd>关词典</span>
       </div>
@@ -174,6 +175,7 @@
                 <span class="ft-text">🎯 聚焦反应实质（弱化旁观粒子）</span>
               </label>
               <button class="focus-toggle" id="quantum-toggle" type="button" title="切换玻尔行星模型与薛定谔量子电子云概率密度视图 (快捷键 Q)">⚛️ 量子电子云 (|ψ|²)</button>
+              <button class="focus-toggle" id="challenge-toggle" type="button" title="开启过渡态鞍点(t=45%)微观机理闯关问答 (快捷键 C)">🎯 鞍点闯关 <span id="challenge-badge">0/26</span></button>
               <button id="btn-energy-hud" class="energy-hud-btn" type="button"
                       title="平滑滚动并高亮聚焦右侧「反应势能面与动力学 (PES)」面板（快捷键 E）">📈 势能曲线</button>
             </div>
@@ -181,6 +183,9 @@
             <div class="viewport-wrap">
               <canvas id="viewport" aria-label="反应显微镜视场"></canvas>
             </div>
+
+            <!-- S14-Step2：🎯 过渡态鞍点闯关面板（challengeMode 下展开） -->
+            <div id="challenge-panel" class="challenge-panel" hidden></div>
 
             <div class="equation-bar">
               <div id="eqText">2H₂ + O₂  →点燃→  2H₂O</div>
@@ -331,14 +336,14 @@
   </div>
 
   <!-- 数据先行（卡带注册表），引擎最后加载 -->
-  <script src="data/ch1_water.js?v=14.0"></script>
-  <script src="data/ch2_5_grade8_core.js?v=14.0"></script>
-  <script src="data/ch2_oxygen_carbon.js?v=14.0"></script>
-  <script src="data/ch3_metals.js?v=14.0"></script>
-  <script src="data/ch4_acids_bases_salts.js?v=14.0"></script>
-  <script src="data/ch5_highschool_leap.js?v=14.0"></script>
-  <script src="data/ch6_stoichiometry_quant.js?v=14.0"></script>
-  <script src="data/glossary_extensions.js?v=14.0"></script>
-  <script src="engine.js?v=14.0"></script>
+  <script src="data/ch1_water.js?v=14.2"></script>
+  <script src="data/ch2_5_grade8_core.js?v=14.2"></script>
+  <script src="data/ch2_oxygen_carbon.js?v=14.2"></script>
+  <script src="data/ch3_metals.js?v=14.2"></script>
+  <script src="data/ch4_acids_bases_salts.js?v=14.2"></script>
+  <script src="data/ch5_highschool_leap.js?v=14.2"></script>
+  <script src="data/ch6_stoichiometry_quant.js?v=14.2"></script>
+  <script src="data/glossary_extensions.js?v=14.2"></script>
+  <script src="engine.js?v=14.2"></script>
 </body>
 </html>

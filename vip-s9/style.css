@@ -475,6 +475,18 @@ body {
   border-color: rgba(168, 85, 247, 0.85);
 }
 
+/* S14-Step2：🎯 鞍点闯关模式激活态（琥珀金高亮） */
+.focus-toggle.challenge-active {
+  border-color: #f59e0b;
+  background: rgba(245, 158, 11, 0.2);
+  color: #fef3c7;
+  box-shadow: 0 0 12px rgba(245, 158, 11, 0.3);
+}
+
+.focus-toggle.challenge-active:hover {
+  border-color: rgba(245, 158, 11, 0.85);
+}
+
 /* S11：📈 势能曲线 (E) HUD 切换按钮（激活态青绿高亮） */
 .energy-hud-btn {
   align-self: center;
@@ -654,6 +666,165 @@ body {
 
 .quantum-truth[hidden] {
   display: none;
+}
+
+/* ---------------------------------------------- S14-Step2：🎯 鞍点闯关面板 */
+.challenge-panel {
+  margin: 10px 0;
+  padding: 12px 14px;
+  border: 1px solid rgba(245, 158, 11, 0.45);
+  border-radius: 12px;
+  background:
+    linear-gradient(165deg, rgba(245, 158, 11, 0.10), rgba(245, 158, 11, 0.03)),
+    var(--panel);
+  box-shadow: 0 0 14px rgba(245, 158, 11, 0.12);
+}
+
+.challenge-panel[hidden] {
+  display: none;
+}
+
+.challenge-panel.flash {
+  animation: challengeFlash 1.2s ease;
+}
+
+@keyframes challengeFlash {
+  0%, 100% {
+    border-color: rgba(245, 158, 11, 0.45);
+    box-shadow: 0 0 14px rgba(245, 158, 11, 0.12);
+  }
+  25%, 65% {
+    border-color: rgba(245, 158, 11, 0.95);
+    box-shadow: 0 0 22px rgba(245, 158, 11, 0.4);
+  }
+}
+
+.challenge-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #fbbf24;
+}
+
+.challenge-head .challenge-solved-tag {
+  margin-left: auto;
+  padding: 2px 9px;
+  border-radius: 999px;
+  border: 1px solid rgba(52, 211, 153, 0.55);
+  background: rgba(52, 211, 153, 0.16);
+  color: #6ee7b7;
+  font-size: 11px;
+}
+
+.challenge-q {
+  margin: 0 0 10px;
+  font-size: 13px;
+  line-height: 1.75;
+  color: #e8eefb;
+}
+
+.challenge-opts {
+  display: grid;
+  gap: 8px;
+}
+
+.challenge-opt {
+  display: block;
+  width: 100%;
+  padding: 9px 12px;
+  border: 1px solid rgba(245, 158, 11, 0.32);
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.04);
+  color: #d9e2f1;
+  font-size: 12.5px;
+  line-height: 1.65;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.16s ease;
+}
+
+.challenge-opt:hover {
+  border-color: rgba(245, 158, 11, 0.75);
+  background: rgba(245, 158, 11, 0.14);
+  color: #fef3c7;
+}
+
+.challenge-opt.correct {
+  border-color: rgba(52, 211, 153, 0.8);
+  background: rgba(52, 211, 153, 0.18);
+  color: #a7f3d0;
+  cursor: default;
+}
+
+.challenge-opt.wrong {
+  border-color: rgba(248, 113, 113, 0.65);
+  background: rgba(248, 113, 113, 0.16);
+  color: #fecaca;
+  opacity: 0.85;
+  cursor: default;
+}
+
+.challenge-hint {
+  margin: 8px 0 0;
+  font-size: 12px;
+  line-height: 1.7;
+  color: #fca5a5;
+}
+
+.challenge-explain {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  border-left: 3px solid #f59e0b;
+  border-radius: 8px;
+  background: rgba(245, 158, 11, 0.10);
+  font-size: 12.5px;
+  line-height: 1.8;
+  color: #fde68a;
+}
+
+.challenge-explain[hidden] {
+  display: none;
+}
+
+.challenge-continue {
+  display: inline-block;
+  margin-top: 9px;
+  padding: 8px 14px;
+  border: 1px solid rgba(245, 158, 11, 0.6);
+  border-radius: 999px;
+  background: linear-gradient(145deg, #f59e0b, #d97706);
+  color: #1c1408;
+  font-size: 12.5px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: all 0.16s ease;
+}
+
+.challenge-continue:hover {
+  filter: brightness(1.08);
+  box-shadow: 0 0 12px rgba(245, 158, 11, 0.4);
+}
+
+/* 左侧目录已通关徽章 */
+.cart-solved-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 17px;
+  height: 17px;
+  padding: 0 4px;
+  margin-left: 6px;
+  border-radius: 999px;
+  border: 1px solid rgba(52, 211, 153, 0.6);
+  background: rgba(52, 211, 153, 0.18);
+  color: #6ee7b7;
+  font-size: 10px;
+  font-weight: 800;
+  flex: 0 0 auto;
 }
 
 /* 图例 */

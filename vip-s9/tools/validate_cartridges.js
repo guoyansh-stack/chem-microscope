@@ -386,6 +386,43 @@ if (!extensions || typeof extensions !== 'object') {
 }
 
 /* ---------------------------------------------------------------------- */
+/* 3.8 S14-Step2 · 过渡态鞍点闯关题库（CHEM_CHALLENGES）                     */
+/* ---------------------------------------------------------------------- */
+
+var challenges = globalThis.CHEM_CHALLENGES;
+
+if (!challenges || typeof challenges !== 'object') {
+  fail('未加载到 CHEM_CHALLENGES（data/glossary_extensions.js 未挂载闯关题库）');
+} else {
+  carts.forEach(function (c) {
+    var ch = challenges[c.id];
+    var cw = '闯关题 ' + c.id;
+    if (!ch) {
+      fail(cw + '：缺少该卡带的鞍点闯关题（S14-Step2 要求 26 张全覆盖）');
+      return;
+    }
+    if (!isNonEmptyStr(ch.q)) fail(cw + '：q 不能为空');
+    if (!Array.isArray(ch.options) || ch.options.length !== 3) {
+      fail(cw + '：options 必须为长度 3 的选项数组');
+    } else {
+      ch.options.forEach(function (o, j) {
+        if (!isNonEmptyStr(o)) fail(cw + '：options[' + j + '] 不能为空');
+      });
+    }
+    if (ch.answer !== 0 && ch.answer !== 1 && ch.answer !== 2) {
+      fail(cw + '：answer 必须为 0/1/2（实际 ' + ch.answer + '）');
+    }
+    var exLen = isNonEmptyStr(ch.explain) ? String(ch.explain).trim().length : 0;
+    if (exLen < 25) {
+      fail(cw + '：explain 长度 ' + exLen + ' < 25 字符');
+    }
+  });
+  Object.keys(challenges).forEach(function (k) {
+    if (!seenIds[k]) warn('闯关题 ' + k + '：找不到对应卡带（多余条目）');
+  });
+}
+
+/* ---------------------------------------------------------------------- */
 /* 4. 全局总量与章节覆盖                                                   */
 /* ---------------------------------------------------------------------- */
 
@@ -419,6 +456,8 @@ function finish() {
     return extensions && extensions[c.id] && isNonEmptyStr(extensions[c.id].followUpAnswer);
   }).length;
   console.log('脑洞追问揭秘底牌 (followUpAnswer): ' + fuTotal + '/' + carts.length + ' 篇');
+  var chTotal = challenges ? Object.keys(challenges).length : 0;
+  console.log('鞍点闯关题库 (CHEM_CHALLENGES): ' + chTotal + '/' + carts.length + ' 题');
 
   carts.forEach(function (c) {
     console.log('  [' + (c.chapter ? c.chapter.id : '?') + '] ' + c.id +

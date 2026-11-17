@@ -96,6 +96,16 @@
   /* ====================================================================== */
 
   var canvas, ctx, viewW = 900, viewH = 520;
+
+  /** S14-Step2：读取已通关卡带集合（localStorage 持久化，损坏时视作空集） */
+  function loadSolvedSet() {
+    try {
+      return new Set(JSON.parse(localStorage.getItem('chem_solved_v1') || '[]'));
+    } catch (e) {
+      return new Set();
+    }
+  }
+
   var state = {
     cartridgeId: 'h2_combustion',
     layer: 'L1',          // 'L1' | 'L2' | 'L3'
@@ -106,7 +116,11 @@
     focus: false,         // S6：聚焦反应实质（弱化旁观粒子），仅作用于 L2/L3
     typeFilter: 'all',    // S6：目录栏反应类型筛选胶囊（all/syn/dec/disp/dbl/mix/star）
     starred: [],          // S9：⭐ 重点攻克星标收藏的反应卡带 id 列表
-    quantumMode: false    // S14：⚛️ L3 量子电子云 (|ψ|²) 透视模式（薛定谔概率密度视图）
+    quantumMode: false,   // S14：⚛️ L3 量子电子云 (|ψ|²) 透视模式（薛定谔概率密度视图）
+    challengeMode: false,           // S14-Step2：🎯 过渡态鞍点闯关模式
+    challengePausedAtSaddle: false, // S14-Step2：是否已由鞍点自动驻停暂停
+    saddleTriggered: false,         // S14-Step2：本轮是否已触发鞍点闯关（换卡/回退 t<0.40 复位）
+    solvedCartridges: loadSolvedSet() // S14-Step2：已通关卡带 id 集合（chem_solved_v1 持久化）
   };
   function currentCartridge() {
     var list = window.CHEM_CARTRIDGES || [];
@@ -4445,7 +4459,12 @@
         html += '<button type="button" class="sb-item' + (c.id === state.cartridgeId ? ' active' : '') +
           '" data-cart="' + c.id + '">' +
           '<span class="sb-ico">' + (c.icon || '•') + '</span>' +
-          '<span class="sb-txt"><span class="sb-name">' + c.shortName + '</span>' +
+          '<span class="sb-txt"><span class="sb-name">' + c.shortName +
+          // S14-Step2：已通关卡带标题旁的 ✓ 徽章
+          (state.solvedCartridges.has(c.id)
+            ? '<span class="cart-solved-badge" title="已通关鞍点闯关">✓</span>'
+            : '') +
+          '</span>' +
           '<span class="sb-eq">' + c.equation + '</span></span>' +
           '<span class="sb-star' + (starred ? ' on' : '') + '" data-star="' + c.id + '"' +
           ' role="button" tabindex="0" aria-label="星标收藏"' +
@@ -4500,9 +4519,12 @@
     state.cartridgeId = id;
     state.t = 0;
     state.playing = false;
+    state.saddleTriggered = false;              // S14-Step2：换卡后允许重新触发鞍点闯关
+    state.challengePausedAtSaddle = false;
     if (els.slider) els.slider.value = 0;
     refreshPlayButton();
     refreshCartridgeInfo();
+    if (state.challengeMode) renderChallengePanel();   // S14-Step2：同步闯关题目
     syncAll();
     render();
     persistLastView();                                  // S9：记忆学习现场
@@ -4602,6 +4624,9 @@
     els.focusToggleWrap = $('focusToggleWrap');
     els.quantumToggle = $('quantum-toggle');  // S14：⚛️ 量子电子云 (|ψ|²) 透视开关
     els.quantumTruth = $('quantumTruth');     // S14：量子力学真相提示框
+    els.challengeToggle = $('challenge-toggle'); // S14-Step2：🎯 鞍点闯关开关
+    els.challengeBadge = $('challenge-badge');   // S14-Step2：闯关计数徽章
+    els.challengePanel = $('challenge-panel');   // S14-Step2：闯关面板容器
     els.energyHudBtn = $('btn-energy-hud');  // S12：📈 势能曲线按钮（平滑滚动聚焦 PES 面板）
     els.pesCard = $('pes-card');            // S12：右侧栏 PES 势能面卡片
     els.pesCanvas = $('pes-canvas');        // S12：PES 独立高分辨率画布
@@ -4673,6 +4698,7 @@
     els.slider.addEventListener('input', function () {
       state.t = clamp01(parseInt(els.slider.value, 10) / 1000);
       state.playing = false;
+      if (state.t < 0.40) state.saddleTriggered = false;   // S14-Step2：回退离开鞍点区后允许再次触发
       refreshPlayButton();
       syncAll();
     });
@@ -4703,6 +4729,11 @@
       els.quantumToggle.addEventListener('click', toggleQuantumMode);
     }
 
+    // S14-Step2：🎯 过渡态鞍点闯关开关
+    if (els.challengeToggle) {
+      els.challengeToggle.addEventListener('click', toggleChallengeMode);
+    }
+
     // S12：📈 势能曲线按钮 → 平滑滚动 + 高亮闪烁聚焦右侧 PES 面板
     if (els.energyHudBtn) {
       els.energyHudBtn.addEventListener('click', focusPESPanel);
@@ -4728,6 +4759,7 @@
     applyLayerUI();
     bindKeyboardShortcuts();
     syncSidebarForViewport();
+    refreshChallengeUI();   // S14-Step2：恢复已通关徽章与闯关计数
   }
 
   function resizeCanvas() {
@@ -4949,6 +4981,21 @@
         state.t = 1;
         state.playing = false;
         refreshPlayButton();
+      }
+      // S14-Step2：闯关模式下推演至 t=45% 过渡态鞍点立即自动驻停并提示作答
+      if (state.challengeMode && !state.saddleTriggered && state.t >= 0.45) {
+        state.t = 0.45;
+        state.playing = false;
+        state.saddleTriggered = true;
+        state.challengePausedAtSaddle = true;
+        if (els.slider) els.slider.value = Math.round(state.t * 1000);
+        refreshPlayButton();
+        renderChallengePanel();
+        if (els.challengePanel && !els.challengePanel.hidden) {
+          els.challengePanel.classList.remove('flash');
+          void els.challengePanel.offsetWidth;   // 强制重排，重放高亮闪烁动画
+          els.challengePanel.classList.add('flash');
+        }
       }
       syncAll();
     }
@@ -5273,12 +5320,165 @@
   function seekBy(delta) {
     state.t = clamp01(state.t + delta);
     state.playing = false;
+    if (state.t < 0.40) state.saddleTriggered = false;   // S14-Step2：回退离开鞍点区后允许再次触发
     if (els.slider && document.activeElement !== els.slider) {
       els.slider.value = Math.round(state.t * 1000);
     }
     refreshPlayButton();
     syncAll();
     render();
+  }
+
+  /* ====================================================================== */
+  /* 7.5 S14-Step2：🎯 过渡态鞍点闯关（CHEM_CHALLENGES）                      */
+  /* ====================================================================== */
+
+  /** 定格/推进时间轴至指定进度（0~1）并全量同步 */
+  function setT(v) {
+    state.t = clamp01(v);
+    if (els.slider && document.activeElement !== els.slider) {
+      els.slider.value = Math.round(state.t * 1000);
+    }
+    syncAll();
+    render();
+  }
+
+  /** 将卡带标记为已通关：入集 + localStorage 持久化 + 徽章刷新 */
+  function saveSolved(id) {
+    if (!id) return;
+    if (!state.solvedCartridges.has(id)) {
+      state.solvedCartridges.add(id);
+      try {
+        localStorage.setItem('chem_solved_v1', JSON.stringify(Array.from(state.solvedCartridges)));
+      } catch (e) { /* 存储不可用时仅保留内存态 */ }
+    }
+    refreshChallengeUI();
+  }
+
+  /** 刷新 #challenge-badge 计数与左侧目录 .cart-solved-badge 徽章 */
+  function refreshChallengeUI() {
+    var total = (window.CHEM_CARTRIDGES || []).length;
+    if (els.challengeBadge) {
+      els.challengeBadge.textContent = state.solvedCartridges.size + '/' + total;
+    }
+    if (els.sidebarBody) {
+      els.sidebarBody.querySelectorAll('[data-cart]').forEach(function (btn) {
+        var id = btn.getAttribute('data-cart');
+        var solved = state.solvedCartridges.has(id);
+        var badge = btn.querySelector('.cart-solved-badge');
+        if (solved && !badge) {
+          badge = document.createElement('span');
+          badge.className = 'cart-solved-badge';
+          badge.title = '已通关鞍点闯关';
+          badge.textContent = '✓';
+          var nameEl = btn.querySelector('.sb-name');
+          (nameEl || btn).appendChild(badge);
+        } else if (!solved && badge && badge.parentElement) {
+          badge.parentElement.removeChild(badge);
+        }
+      });
+    }
+  }
+
+  /** 🎯 切换鞍点闯关模式（点击按钮 / 快捷键 C 共用） */
+  function toggleChallengeMode() {
+    state.challengeMode = !state.challengeMode;
+    if (els.challengeToggle) {
+      els.challengeToggle.classList.toggle('challenge-active', state.challengeMode);
+      els.challengeToggle.setAttribute('aria-pressed', state.challengeMode ? 'true' : 'false');
+    }
+    if (state.challengeMode) {
+      // 开启闯关：未在播放且远离鞍点区时，自动定格至 t=45% 过渡态鞍点
+      if (!state.playing && (state.t < 0.35 || state.t > 0.65)) {
+        setT(0.45);
+      }
+      renderChallengePanel();
+    } else if (els.challengePanel) {
+      els.challengePanel.hidden = true;
+    }
+    syncAll();
+    render();
+  }
+
+  /** 渲染当前卡带的鞍点闯关题目（CHEM_CHALLENGES[c.id]） */
+  function renderChallengePanel() {
+    if (!els.challengePanel) return;
+    var c = currentCartridge();
+    if (!c || !state.challengeMode) {
+      els.challengePanel.hidden = true;
+      return;
+    }
+    var ch = (window.CHEM_CHALLENGES || {})[c.id];
+    els.challengePanel.hidden = false;
+    if (!ch) {
+      els.challengePanel.innerHTML =
+        '<div class="challenge-head"><span>🎯 过渡态鞍点 · t=45%</span></div>' +
+        '<p class="challenge-q">本卡带的鞍点闯关题正在赶稿中，先拖动时间轴观察断键与电子转移吧！</p>';
+      return;
+    }
+    var solved = state.solvedCartridges.has(c.id);
+    var letters = ['A', 'B', 'C'];
+    var html = '<div class="challenge-head">' +
+      '<span>🎯 过渡态鞍点 · ' + escapeHtml(c.shortName || c.name) + ' · t=45%</span>' +
+      (solved ? '<span class="challenge-solved-tag">✓ 已通关</span>' : '') +
+      '</div>' +
+      '<p class="challenge-q">' + escapeHtml(ch.q) + '</p>' +
+      '<div class="challenge-opts">';
+    for (var i = 0; i < ch.options.length; i++) {
+      html += '<button type="button" class="challenge-opt' +
+        (solved && i === ch.answer ? ' correct' : '') +
+        '" data-opt="' + i + '">' + letters[i] + '. ' + escapeHtml(ch.options[i]) + '</button>';
+    }
+    html += '</div>' +
+      '<p class="challenge-hint" hidden></p>' +
+      '<div class="challenge-explain"' + (solved ? '' : ' hidden') + '>' +
+      '<strong>【第一性原理】</strong>' + escapeHtml(ch.explain) +
+      '<button type="button" class="challenge-continue">▶ 越过能垒滑向新稳态</button>' +
+      '</div>';
+    els.challengePanel.innerHTML = html;
+
+    els.challengePanel.querySelectorAll('.challenge-opt').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        onChallengeAnswer(parseInt(btn.getAttribute('data-opt'), 10), ch);
+      });
+    });
+    var cont = els.challengePanel.querySelector('.challenge-continue');
+    if (cont) cont.addEventListener('click', continueAfterChallenge);
+  }
+
+  /** 答题反馈：答错提示重试，答对展开解析并点亮通关徽章 */
+  function onChallengeAnswer(idx, ch) {
+    if (!els.challengePanel || !ch) return;
+    var opts = els.challengePanel.querySelectorAll('.challenge-opt');
+    var hint = els.challengePanel.querySelector('.challenge-hint');
+    if (idx === ch.answer) {
+      opts.forEach(function (b, i) {
+        b.disabled = true;
+        if (i === ch.answer) b.classList.add('correct');
+      });
+      var ex = els.challengePanel.querySelector('.challenge-explain');
+      if (ex) ex.hidden = false;
+      if (hint) hint.hidden = true;
+      var c = currentCartridge();
+      if (c) saveSolved(c.id);
+    } else {
+      if (opts[idx]) {
+        opts[idx].classList.add('wrong');
+        opts[idx].disabled = true;
+      }
+      if (hint) {
+        hint.hidden = false;
+        hint.textContent = '再仔细观察画面中的粒子成键与电子流向，换个选项试试！';
+      }
+    }
+  }
+
+  /** ▶ 越过能垒滑向新稳态：从 t=0.45 自动继续播放至 1.0 */
+  function continueAfterChallenge() {
+    state.challengePausedAtSaddle = false;
+    if (state.t < 0.45) setT(0.45);
+    state.playing = true;
+    refreshPlayButton();
   }
 
   /** L1/L2/L3 三层视界按钮高亮与聚焦开关可用性同步 */
@@ -5381,6 +5581,13 @@
       if (key === 'q' || key === 'Q') {
         ev.preventDefault();
         toggleQuantumMode();
+        return;
+      }
+
+      // C：一键切换 🎯 过渡态鞍点闯关模式
+      if (key === 'c' || key === 'C') {
+        ev.preventDefault();
+        toggleChallengeMode();
         return;
       }
 
